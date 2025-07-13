@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Collection</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="app()">
+    <header>
+        <h1>Collectible Items</h1>
+        <div class="filters">
+            <select x-model="selectedCategory" @change="fetchItems()">
+                <option value="">All Categories</option>
+                <template x-for="category in categories" :key="category.id">
+                    <option :value="category.id" x-text="category.name"></option>
+                </template>
+            </select>
+            <a href="/admin.html">Admin Panel</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="item-grid">
+            <template x-if="loading">
+                <p>Loading items...</p>
+            </template>
+            <template x-if="!loading && items.length === 0">
+                <p>No items found. Add some in the admin panel!</p>
+            </template>
+            <template x-for="item in items" :key="item.id">
+                <div class="item-card" @click="fetchItemDetails(item.id)">
+                    <img :src="item.primary_photo ? '/uploads/' + item.primary_photo : 'https://via.placeholder.com/300x200?text=No+Image'" alt="Item image">
+                    <div class="item-card-info">
+                        <h3 x-text="item.name"></h3>
+                        <p x-text="item.brand || 'N/A'"></p>
+                        <span class="category-badge" x-text="item.category_name"></span>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <div class="modal-overlay" x-show="isModalOpen" @click.self="isModalOpen = false" x-cloak>
+        <div class="modal-content" @click.stop>
+            <button class="modal-close" @click="isModalOpen = false">&times;</button>
+            <template x-if="modalLoading">
+                <p>Loading details...</p>
+            </template>
+            <template x-if="!modalLoading && currentItem">
+                <div>
+                    <h2 x-text="currentItem.name"></h2>
+                    <span class="category-badge" x-text="currentItem.category_name"></span>
+                    <p><strong>Brand:</strong> <span x-text="currentItem.brand"></span></p>
+                    <p><strong>Serial #:</strong> <span x-text="currentItem.serial_number"></span></p>
+                    <p><strong>Form Factor:</strong> <span x-text="currentItem.form_factor"></span></p>
+                    <p x-show="currentItem.description"><strong>Description:</strong> <span x-text="currentItem.description"></span></p>
+                    
+                    <div x-show="Object.keys(currentItem.specifications).length > 0">
+                        <h4>Specifications</h4>
+                        <ul>
+                            <template x-for="[key, value] of Object.entries(currentItem.specifications)">
+                                <li><strong x-text="key"></strong>: <span x-text="value"></span></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <div x-show="currentItem.urls.length > 0">
+                        <h4>Related Links</h4>
+                        <ul>
+                            <template x-for="url in currentItem.urls">
+                                <li><a :href="url" target="_blank" x-text="url"></a></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <h4>Photos</h4>
+                    <div class="photo-gallery">
+                        <template x-if="currentItem.photos.length === 0">
+                            <p>No photos available.</p>
+                        </template>
+                        <template x-for="photo in currentItem.photos">
+                            <a :href="'/uploads/' + photo" target="_blank">
+                                <img :src="'/uploads/' + photo" alt="Item photo">
+                            </a>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        function app() {
+            return {
+                loading: true,
+                items: [],
+                categories: [],
+                selectedCategory: '',
+                isModalOpen: false,
+                modalLoading: false,
+                currentItem: null,
+                init() {
+                    this.fetchCategories();
+                    this.fetchItems();
+                },
+                fetchCategories() {
+                    fetch('/api/categories')
+                        .then(res => res.json())
+                        .then(data => this.categories = data);
+                },
+                fetchItems() {
+                    this.loading = true;
+                    let url = '/api/items';
+                    if (this.selectedCategory) {
+                        url += `?category_id=${this.selectedCategory}`;
+                    }
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.items = data;
+                            this.loading = false;
+                        });
+                },
+                fetchItemDetails(id) {
+                    this.isModalOpen = true;
+                    this.modalLoading = true;
+                    this.currentItem = null;
+                    fetch(`/api/items/${id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.currentItem = data;
+                            this.modalLoading = false;
+                        });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
