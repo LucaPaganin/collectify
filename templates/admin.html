@@ -1,87 +1,133 @@
 {% extends "base.html" %}
 {% block title %}Admin Panel - Categories{% endblock %}
 {% block content %}
-<body x-data="adminApp()">
-    <header>
-        <h1>Admin Panel</h1>
-        <div class="controls">
-            <a href="/" class="admin-link">Back to Public View</a>
-        </div>
-    </header>
-
-    <main class="admin-container">
-        <!-- Category Management -->
-        <section>
-            <h2>Manage Categories</h2>
-            <p>Add or remove item categories. A category cannot be deleted if it is being used by any items.</p>
-            <div class="category-list">
-                <ul>
-                    <template x-for="cat in categories" :key="cat.id">
-                        <li>
-                            <span x-text="cat.name"></span>
-                            <button @click="deleteCategory(cat.id)" class="btn-delete" title="Delete Category">&times;</button>
-                        </li>
-                    </template>
-                </ul>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Admin Panel</h1>
+        <a href="/" class="btn btn-outline-secondary">Back to Public View</a>
+    </div>
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h4 mb-3">Manage Categories</h2>
+                    <p class="text-muted">Add or remove item categories. A category cannot be deleted if it is being used by any items.</p>
+                    <ul class="list-group mb-3" id="categoryList">
+                        <!-- Categories will be rendered here by JS -->
+                    </ul>
+                    <form id="categoryForm" class="d-flex gap-2">
+                        <input type="text" class="form-control" id="newCategoryName" placeholder="New category name" required>
+                        <button type="submit" class="btn btn-primary">Add Category</button>
+                    </form>
+                </div>
             </div>
-            <form @submit.prevent="addCategory" class="category-form">
-                <input type="text" x-model="newCategoryName" placeholder="New category name" required>
-                <button type="submit">Add Category</button>
-            </form>
-        </section>
-    </main>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const categoryList = document.getElementById('categoryList');
+    const categoryForm = document.getElementById('categoryForm');
+    const newCategoryName = document.getElementById('newCategoryName');
+    let categories = [];
 
-    <script>
-        function adminApp() {
-            return {
-                categories: [],
-                newCategoryName: '',
-
-                init() {
-                    this.fetchCategories();
-                },
-                fetchCategories() {
-                    fetch('/api/categories')
-                        .then(res => res.json())
-                        .then(data => {
-                            this.categories = data;
-                        });
-                },
-                addCategory() {
-                    fetch('/api/categories', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: this.newCategoryName })
-                    })
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.json().then(err => { throw new Error(err.error || 'Failed to add category.') });
-                        }
-                        return res.json();
-                    })
-                    .then(newCategory => {
-                        this.categories.push(newCategory);
-                        this.categories.sort((a, b) => a.name.localeCompare(b.name));
-                        this.newCategoryName = '';
-                    })
-                    .catch(err => alert(err.message));
-                },
-                deleteCategory(id) {
-                    if (!confirm('Are you sure? This cannot be undone.')) return;
-                    fetch(`/api/categories/${id}`, { method: 'DELETE' })
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.json().then(err => { throw new Error(err.error) });
-                        }
-                        return res.json();
-                    })
-                    .then(() => {
-                        this.categories = this.categories.filter(c => c.id !== id);
-                    })
-                    .catch(err => alert(err.message));
-                }
+    function fetchCategories() {
+        fetch('/api/categories')
+            .then(res => res.json())
+            .then(data => {
+                categories = data;
+                renderCategories();
+            });
+    }
+    function renderCategories() {
+        if (!categories.length) {
+            categoryList.innerHTML = '<li class="list-group-item text-center text-muted">No categories found.</li>';
+            return;
+        }
+        categoryList.innerHTML = categories.map(cat => `
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <div class="flex-grow-1 d-flex align-items-center gap-2">
+                    <input type="text" class="form-control form-control-sm category-name-input" value="${cat.name}" data-id="${cat.id}" style="max-width: 250px;" readonly>
+                </div>
+                <button class="btn btn-sm btn-outline-primary me-1 edit-category-btn" data-id="${cat.id}" title="Edit Category">✎</button>
+                <button class="btn btn-sm btn-outline-danger" data-id="${cat.id}" title="Delete Category">&times;</button>
+            </li>
+        `).join('');
+    }
+    categoryForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const name = newCategoryName.value.trim();
+        if (!name) return;
+        fetch('/api/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Failed to add category.') });
+            }
+            return res.json();
+        })
+        .then(newCategory => {
+            categories.push(newCategory);
+            categories.sort((a, b) => a.name.localeCompare(b.name));
+            renderCategories();
+            newCategoryName.value = '';
+        })
+        .catch(err => alert(err.message));
+    });
+    categoryList.addEventListener('click', function (e) {
+        // Delete
+        if (e.target.classList.contains('btn-outline-danger') && e.target.dataset.id) {
+            const id = e.target.dataset.id;
+            if (!confirm('Are you sure? This cannot be undone.')) return;
+            fetch(`/api/categories/${id}`, { method: 'DELETE' })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error) });
+                    }
+                    return res.json();
+                })
+                .then(() => {
+                    categories = categories.filter(c => c.id != id);
+                    renderCategories();
+                })
+                .catch(err => alert(err.message));
+        }
+        // Edit
+        if (e.target.classList.contains('edit-category-btn') && e.target.dataset.id) {
+            const id = e.target.dataset.id;
+            const input = categoryList.querySelector(`input.category-name-input[data-id='${id}']`);
+            if (input.readOnly) {
+                input.readOnly = false;
+                input.focus();
+                e.target.textContent = '💾';
+                e.target.title = 'Save';
+            } else {
+                const newName = input.value.trim();
+                if (!newName) return alert('Category name cannot be empty.');
+                fetch(`/api/categories/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || 'Failed to update category.') });
+                    }
+                    return res.json();
+                })
+                .then(updated => {
+                    const cat = categories.find(c => c.id == id);
+                    if (cat) cat.name = updated.name;
+                    renderCategories();
+                })
+                .catch(err => alert(err.message));
             }
         }
-    </script>
-</body>
+    });
+    fetchCategories();
+});
+</script>
 {% endblock %}

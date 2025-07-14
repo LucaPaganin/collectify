@@ -140,18 +140,22 @@ def add_category():
     except sqlite3.IntegrityError:
         return jsonify({'error': 'Category already exists'}), 409
 
-@app.route('/api/categories/<int:id>', methods=['DELETE'])
+
+@app.route('/api/categories/<int:id>', methods=['PUT'])
 @requires_auth
-def delete_category(id):
-    # Deletes a category (protected).
+def update_category(id):
+    # Renames a category and updates all related items.
+    data = request.get_json()
+    if not data or not data.get('name'):
+        return jsonify({'error': 'Category name is required'}), 400
     db = get_db()
-    cursor = db.execute("SELECT COUNT(id) FROM items WHERE category_id = ?", (id,))
-    if cursor.fetchone()[0] > 0:
-        return jsonify({'error': 'Cannot delete category: it is currently in use by items.'}), 400
-    
-    db.execute("DELETE FROM categories WHERE id = ?", (id,))
+    # Check if new name already exists
+    cursor = db.execute("SELECT id FROM categories WHERE name = ? AND id != ?", (data['name'], id))
+    if cursor.fetchone():
+        return jsonify({'error': 'Category name already exists'}), 409
+    db.execute("UPDATE categories SET name = ? WHERE id = ?", (data['name'], id))
     db.commit()
-    return jsonify({'message': 'Category deleted'})
+    return jsonify({'id': id, 'name': data['name']})
 
 # --- API: Items (Public) ---
 def get_full_item_details(item_id):
