@@ -24,6 +24,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 h1, h2, h3 {
@@ -35,37 +37,60 @@ main {
     padding: 2rem;
 }
 
+.admin-container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--surface-color);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
 [x-cloak] {
     display: none !important;
 }
 
+/* Controls */
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.admin-link {
+    color: var(--secondary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.admin-link:hover {
+    text-decoration: underline;
+}
+
 /* Grids */
-.item-grid, .item-grid-admin {
+.item-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
 }
 
 /* Cards */
-.item-card, .item-card-admin {
+.item-card {
     background-color: var(--surface-color);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
-}
-.item-card {
     cursor: pointer;
 }
 .item-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-.item-card img, .item-card-admin img {
+.item-card img {
     width: 100%;
     height: 200px;
     object-fit: cover;
     background-color: #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 .item-card-info {
     padding: 1rem;
@@ -84,58 +109,20 @@ main {
     margin-top: 0.5rem;
 }
 
-/* Admin Specific */
-.admin-layout {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 2rem;
-    align-items: start;
-}
-.item-card-admin {
-    display: flex;
-    flex-direction: column;
-}
-.item-card-admin .item-card-info {
-    flex-grow: 1;
-}
-.item-card-actions {
-    display: flex;
-    border-top: 1px solid var(--border-color);
-}
-.item-card-actions button {
-    flex-grow: 1;
-    background: none;
-    border: none;
-    padding: 0.75rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.item-card-actions button:hover {
-    background-color: #f1f3f5;
-}
-.item-card-actions button:first-child {
-    border-right: 1px solid var(--border-color);
-}
-.btn-delete {
-    color: var(--danger-color);
-}
-.btn-add-item {
-    margin-bottom: 1rem;
-    width: 100%;
-}
+/* Admin Category Page */
 .category-list ul {
     list-style: none;
     padding: 0;
+    margin-top: 1rem;
 }
 .category-list li {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: 4px;
-}
-.category-list li:hover {
-    background-color: #e9ecef;
+    border: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
 }
 .category-list button {
     background: none;
@@ -143,23 +130,30 @@ main {
     cursor: pointer;
     font-size: 1.2rem;
     line-height: 1;
+    color: var(--danger-color);
+    padding: 0.2rem 0.5rem;
 }
 .category-form {
     display: flex;
     gap: 0.5rem;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
 }
 
 /* Forms & Inputs */
-input[type="text"], input[type="url"], input[type="file"], select, textarea, button {
+input[type="text"], input[type="url"], input[type="file"], select, textarea {
     width: 100%;
     padding: 0.75rem;
     border-radius: 4px;
     border: 1px solid var(--border-color);
     font-size: 1rem;
     box-sizing: border-box;
+    background-color: #fff;
 }
 button {
+    padding: 0.75rem 1.25rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -206,10 +200,6 @@ button.btn-delete:hover {
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
 }
-.form-actions button {
-    width: auto;
-    padding: 0.75rem 1.5rem;
-}
 .form-actions button[type="button"] {
     background-color: var(--secondary-color);
 }
@@ -229,13 +219,15 @@ button.btn-delete:hover {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 .modal-content {
     background-color: var(--surface-color);
     padding: 2rem;
     border-radius: 8px;
     max-width: 600px;
-    width: 90%;
+    width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
@@ -252,6 +244,27 @@ button.btn-delete:hover {
     font-size: 2rem;
     color: var(--secondary-color);
     cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.modal-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+ul.spec-list {
+    list-style: none;
+    padding-left: 0;
+}
+ul.spec-list li {
+    padding: 0.25rem 0;
 }
 .photo-gallery {
     display: flex;
@@ -264,6 +277,7 @@ button.btn-delete:hover {
     height: 80px;
     object-fit: cover;
     border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
 .photo-gallery img.thumb {
     width: 80px;
