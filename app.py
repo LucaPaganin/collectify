@@ -98,16 +98,18 @@ def requires_auth(f):
     return decorated
 
 # --- Frontend Routes ---
+
+# --- Frontend Routes with Jinja2 context ---
 @app.route('/')
 def index():
-    # Serves the main public page.
-    return render_template('index.html')
+    # Serves the main public page using Jinja2 template inheritance.
+    return render_template('index.html', page_title="My Collection")
 
 @app.route('/admin.html')
 @requires_auth
 def admin():
-    # Serves the protected admin page for category management.
-    return render_template('admin.html')
+    # Serves the protected admin page for category management using Jinja2 template inheritance.
+    return render_template('admin.html', page_title="Admin Panel")
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):

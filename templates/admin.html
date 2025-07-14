@@ -1,12 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Categories</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
+{% extends "base.html" %}
+{% block title %}Admin Panel - Categories{% endblock %}
+{% block content %}
 <body x-data="adminApp()">
     <header>
         <h1>Admin Panel</h1>
@@ -90,4 +84,4 @@
         }
     </script>
 </body>
-</html>
+{% endblock %}
