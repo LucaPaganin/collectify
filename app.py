@@ -72,7 +72,7 @@ def ensure_db_initialized():
 # --- Security ---
 def check_auth(username, password):
     """Simple basic authentication for the admin panel."""
-    return username == 'admin' and password == 'password'
+    return username == os.getenv('ADMIN_USERNAME') and password == os.getenv('ADMIN_PASSWORD')
 
 def authenticate():
     """Sends a 401 response that enables basic auth."""

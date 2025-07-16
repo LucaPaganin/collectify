@@ -11,6 +11,8 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=password
     restart: always
 
 volumes:
