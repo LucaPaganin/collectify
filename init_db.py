@@ -1,69 +1,32 @@
 import os
-import sqlite3
-from flask import g
-
-
-def get_db(app):
-    # Establishes a database connection for the current request context.
-    if 'db' not in g:
-        g.db = sqlite3.connect(app.config['DATABASE'])
-        g.db.row_factory = sqlite3.Row
-    return g.db
+from flask import Flask
+from models import db, Category, Item, ItemPhoto, ItemUrl
 
 
 def init_db(app):
-    # Initializes the database using the schema.sql file.
+    """Initialize the database with SQLAlchemy models"""
     with app.app_context():
-        db = get_db(app)
-        # The schema is now embedded to avoid file I/O issues in some environments
-        schema_sql = """
-            DROP TABLE IF EXISTS item_photos;
-            DROP TABLE IF EXISTS item_urls;
-            DROP TABLE IF EXISTS items;
-            DROP TABLE IF EXISTS categories;
-            
-            CREATE TABLE categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE
-            );
-            
-            CREATE TABLE items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                category_id INTEGER,
-                name TEXT NOT NULL,
-                brand TEXT,
-                serial_number TEXT,
-                form_factor TEXT,
-                description TEXT,
-                specifications TEXT, -- Storing a JSON object for extensibility
-                FOREIGN KEY (category_id) REFERENCES categories(id)
-            );
-            
-            CREATE TABLE item_photos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id INTEGER,
-                file_path TEXT NOT NULL,
-                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-            );
-            
-            CREATE TABLE item_urls (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id INTEGER,
-                url TEXT NOT NULL,
-                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-            );
-        """
-        db.executescript(schema_sql)
-        # Add a default category if none exist
-        cursor = db.execute("SELECT COUNT(id) FROM categories")
-        if cursor.fetchone()[0] == 0:
-            db.execute("INSERT INTO categories (name) VALUES (?)", ('Uncategorized',))
-        db.commit()
+        # Create all tables
+        db.drop_all()
+        db.create_all()
+        
+        # Add default categories
+        categories = [
+            Category(name='Uncategorized'),
+            Category(name='Vinyl Records'),
+            Category(name='Action Figures'),
+            Category(name='Trading Cards'),
+            Category(name='Comics'),
+            Category(name='Stamps')
+        ]
+        db.session.add_all(categories)
+        db.session.commit()
 
 
 def ensure_db_initialized(app):
-    """Check if database exists and initialize it if needed"""
-    if not os.path.exists(app.config['DATABASE']):
+    """Check if database needs initialization and do it if needed"""
+    db_path = os.path.join(app.root_path, 'collectibles.db')
+    if not os.path.exists(db_path):
         # Ensure upload folder exists
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -75,9 +38,110 @@ def ensure_db_initialized(app):
 
 if __name__ == "__main__":
     # This allows running the script directly to initialize the database
-    from flask import Flask
     app = Flask(__name__)
-    app.config['DATABASE'] = os.path.join(os.path.dirname(__file__), 'collectibles.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'collectibles.db')}"
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
-    ensure_db_initialized(app)
-    print("Database initialized.")
+    
+    # Initialize the SQLAlchemy extension with our Flask app
+    db.init_app(app)
+    
+    # Initialize the database
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        
+        # Add sample categories with specification schemas
+        vinyl_specs = {
+            "diameter": {
+                "type": "select",
+                "label": "Diameter",
+                "placeholder": "Select record size",
+                "options": [
+                    {"value": "7", "label": "7\" (45 RPM Single)"},
+                    {"value": "10", "label": "10\" (EP/LP)"},
+                    {"value": "12", "label": "12\" (LP)"}
+                ]
+            },
+            "rpm": {
+                "type": "select",
+                "label": "RPM",
+                "options": [
+                    {"value": "33.3", "label": "33 1/3 RPM"},
+                    {"value": "45", "label": "45 RPM"},
+                    {"value": "78", "label": "78 RPM"}
+                ]
+            },
+            "condition": {
+                "type": "select",
+                "label": "Condition",
+                "options": [
+                    {"value": "mint", "label": "Mint"},
+                    {"value": "near_mint", "label": "Near Mint"},
+                    {"value": "very_good", "label": "Very Good"},
+                    {"value": "good", "label": "Good"},
+                    {"value": "fair", "label": "Fair"},
+                    {"value": "poor", "label": "Poor"}
+                ]
+            },
+            "release_year": {
+                "type": "number",
+                "label": "Release Year",
+                "min": 1900,
+                "max": 2025
+            }
+        }
+        
+        action_figure_specs = {
+            "height": {
+                "type": "number",
+                "label": "Height (cm)",
+                "placeholder": "Height in centimeters",
+                "min": 0,
+                "step": 0.1
+            },
+            "articulation_points": {
+                "type": "number",
+                "label": "Articulation Points",
+                "placeholder": "Number of articulation points",
+                "min": 0
+            },
+            "material": {
+                "type": "text",
+                "label": "Material",
+                "placeholder": "e.g., Plastic, Die-cast"
+            },
+            "condition": {
+                "type": "select",
+                "label": "Condition",
+                "options": [
+                    {"value": "sealed", "label": "Sealed in Box"},
+                    {"value": "mint", "label": "Mint"},
+                    {"value": "complete", "label": "Complete"},
+                    {"value": "loose", "label": "Loose"},
+                    {"value": "damaged", "label": "Damaged"}
+                ]
+            }
+        }
+        
+        uncategorized = Category(name='Uncategorized')
+        uncategorized.set_specifications_schema({})
+        
+        vinyl_records = Category(name='Vinyl Records')
+        vinyl_records.set_specifications_schema(vinyl_specs)
+        
+        action_figures = Category(name='Action Figures')
+        action_figures.set_specifications_schema(action_figure_specs)
+        
+        categories = [
+            uncategorized,
+            vinyl_records,
+            action_figures,
+            Category(name='Trading Cards'),
+            Category(name='Comics'),
+            Category(name='Stamps')
+        ]
+        db.session.add_all(categories)
+        db.session.commit()
+        
+    print("Database initialized with sample categories.")

@@ -15,10 +15,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let categories = [];
     let items = [];
-    let specs = [];
+    let currentCategorySchema = {};  // Store current category's specification schema
+    let specValues = {};  // Store specification values for the current item
     let urls = [];
 
-    // Fetch categories and items
+    // Fetch categories, items and category specs schema
     function fetchCategories() {
         fetch('/api/categories')
             .then(res => res.json())
@@ -28,6 +29,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderCategoryField();
             });
     }
+    
+    function fetchCategorySpecsSchema(categoryId) {
+        if (!categoryId) {
+            currentCategorySchema = {};
+            renderSpecificationFields();
+            return Promise.resolve({});
+        }
+        
+        return fetch(`/api/categories/${categoryId}/specifications_schema`)
+            .then(res => res.json())
+            .then(schema => {
+                currentCategorySchema = schema;
+                renderSpecificationFields();
+                return schema;
+            });
+    }
+    
     function fetchItems(categoryId = '') {
         let url = '/api/items';
         if (categoryId) url += `?category_id=${categoryId}`;
@@ -69,19 +87,70 @@ document.addEventListener('DOMContentLoaded', function () {
     // Modal form logic
     function resetForm() {
         itemForm.reset();
-        specs = [];
+        specValues = {};
         urls = [];
-        renderSpecs();
+        renderSpecificationFields();
         renderUrls();
+        
+        // Fetch specs schema for the default category
+        if (categoryField.value) {
+            fetchCategorySpecsSchema(categoryField.value);
+        }
     }
-    function renderSpecs() {
-        specificationsList.innerHTML = specs.map((spec, i) => `
-            <div class="input-group mb-2">
-                <input type="text" class="form-control" placeholder="Attribute (e.g., 'Weight')" value="${spec.key || ''}" data-index="${i}" data-type="key">
-                <input type="text" class="form-control" placeholder="Value (e.g., '250g')" value="${spec.value || ''}" data-index="${i}" data-type="value">
-                <button type="button" class="btn btn-outline-danger" data-index="${i}" data-action="remove-spec">&times;</button>
-            </div>
-        `).join('');
+    function renderSpecificationFields() {
+        // Render specification fields based on the category's schema
+        specificationsList.innerHTML = '';
+        
+        if (Object.keys(currentCategorySchema).length === 0) {
+            specificationsList.innerHTML = '<p class="text-muted">No specifications defined for this category.</p>';
+            return;
+        }
+        
+        for (const [key, spec] of Object.entries(currentCategorySchema)) {
+            const value = specValues[key] || '';
+            let fieldHtml = '';
+            
+            if (spec.type === 'text' || !spec.type) {
+                fieldHtml = `
+                    <div class="mb-3">
+                        <label class="form-label">${spec.label || key}</label>
+                        <input type="text" class="form-control" 
+                            placeholder="${spec.placeholder || ''}" 
+                            value="${value}" 
+                            data-spec-key="${key}">
+                    </div>
+                `;
+            } else if (spec.type === 'number') {
+                fieldHtml = `
+                    <div class="mb-3">
+                        <label class="form-label">${spec.label || key}</label>
+                        <input type="number" class="form-control" 
+                            placeholder="${spec.placeholder || ''}" 
+                            value="${value}"
+                            min="${spec.min || ''}" 
+                            max="${spec.max || ''}" 
+                            step="${spec.step || 1}" 
+                            data-spec-key="${key}">
+                    </div>
+                `;
+            } else if (spec.type === 'select' && spec.options) {
+                const options = spec.options.map(opt => 
+                    `<option value="${opt.value}" ${value === opt.value ? 'selected' : ''}>${opt.label}</option>`
+                ).join('');
+                
+                fieldHtml = `
+                    <div class="mb-3">
+                        <label class="form-label">${spec.label || key}</label>
+                        <select class="form-select" data-spec-key="${key}">
+                            <option value="">Select...</option>
+                            ${options}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            specificationsList.innerHTML += fieldHtml;
+        }
     }
     function renderUrls() {
         urlsList.innerHTML = urls.map((url, i) => `
@@ -95,26 +164,35 @@ document.addEventListener('DOMContentLoaded', function () {
     categorySelect.addEventListener('change', function () {
         fetchItems(this.value);
     });
-    addSpecBtn.addEventListener('click', function () {
-        specs.push({ key: '', value: '' });
-        renderSpecs();
+    
+    categoryField.addEventListener('change', function() {
+        // When category changes, fetch its specification schema
+        specValues = {}; // Reset current spec values
+        const categoryId = this.value;
+        if (categoryId) {
+            fetchCategorySpecsSchema(categoryId);
+        } else {
+            currentCategorySchema = {};
+            renderSpecificationFields();
+        }
     });
+    
     addUrlBtn.addEventListener('click', function () {
         urls.push({ value: '' });
         renderUrls();
     });
+    
     specificationsList.addEventListener('input', function (e) {
-        const idx = e.target.dataset.index;
-        const type = e.target.dataset.type;
-        if (type === 'key') specs[idx].key = e.target.value;
-        if (type === 'value') specs[idx].value = e.target.value;
-    });
-    specificationsList.addEventListener('click', function (e) {
-        if (e.target.dataset.action === 'remove-spec') {
-            specs.splice(e.target.dataset.index, 1);
-            renderSpecs();
+        const specKey = e.target.dataset.specKey;
+        if (specKey) {
+            specValues[specKey] = e.target.value;
         }
     });
+    
+    // Hide the add spec button since specs are now based on category schema
+    if (addSpecBtn) {
+        addSpecBtn.style.display = 'none';
+    }
     urlsList.addEventListener('input', function (e) {
         const idx = e.target.dataset.index;
         if (e.target.dataset.type === 'url') urls[idx].value = e.target.value;
@@ -128,17 +206,56 @@ document.addEventListener('DOMContentLoaded', function () {
     // Form submit
     itemForm.addEventListener('submit', function (e) {
         e.preventDefault();
+        
+        // Client-side validation for required fields
+        const nameField = document.getElementById('name');
+        const categoryField = document.getElementById('category');
+        const brandField = document.getElementById('brand');
+        
+        let isValid = true;
+        
+        if (!nameField.value.trim()) {
+            nameField.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            nameField.classList.remove('is-invalid');
+        }
+        
+        if (!categoryField.value) {
+            categoryField.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            categoryField.classList.remove('is-invalid');
+        }
+        
+        if (!brandField.value.trim()) {
+            brandField.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            brandField.classList.remove('is-invalid');
+        }
+        
+        if (!isValid) {
+            return; // Stop form submission if validation fails
+        }
+        
         const formData = new FormData(itemForm);
-        // Add specs and urls
-        const specsObj = {};
-        specs.forEach(spec => { if (spec.key) specsObj[spec.key] = spec.value; });
-        formData.append('specifications', JSON.stringify(specsObj));
+        // Add specification values and urls
+        formData.append('specification_values', JSON.stringify(specValues));
         urls.forEach(url => { if (url.value) formData.append('urls[]', url.value); });
+        
         fetch('/api/items', {
             method: 'POST',
             body: formData
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(errorData => {
+                    throw new Error(errorData.error || 'Failed to create item');
+                });
+            }
+            return res.json();
+        })
         .then(() => {
             fetchItems(categorySelect.value);
             itemModal.hide();

@@ -1,96 +1,47 @@
 import os
 import json
-import sqlite3
 from functools import wraps
-from flask import Flask, request, jsonify, Response, send_from_directory, g, render_template
+from flask import Flask, request, jsonify, Response, send_from_directory, render_template
+from flask_sqlalchemy import SQLAlchemy
+from models import db, Category, Item, ItemPhoto, ItemUrl
 
 # --- App & Config ---
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
-app.config['DATABASE'] = os.path.join(app.root_path, 'collectibles.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(app.root_path, 'collectibles.db')}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 
+# Initialize the SQLAlchemy extension with our Flask app
+db.init_app(app)
+
 
 # --- Database Setup ---
-def get_db():
-    # Establishes a database connection for the current request context.
-    if 'db' not in g:
-        g.db = sqlite3.connect(app.config['DATABASE'])
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(exception):
-    # Closes the database connection at the end of the request.
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
-
 def init_db():
-    # Initializes the database using the embedded schema
+    """Initialize the database with SQLAlchemy models"""
     with app.app_context():
-        db = get_db()
-        # The schema is now embedded to avoid file I/O issues in some environments
-        schema_sql = """
-            DROP TABLE IF EXISTS item_photos;
-            DROP TABLE IF EXISTS item_urls;
-            DROP TABLE IF EXISTS items;
-            DROP TABLE IF EXISTS categories;
-            
-            CREATE TABLE categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE
-            );
-            
-            CREATE TABLE items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                category_id INTEGER,
-                name TEXT NOT NULL,
-                brand TEXT,
-                serial_number TEXT,
-                form_factor TEXT,
-                description TEXT,
-                specifications TEXT, -- Storing a JSON object for extensibility
-                FOREIGN KEY (category_id) REFERENCES categories(id)
-            );
-            
-            CREATE TABLE item_photos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id INTEGER,
-                file_path TEXT NOT NULL,
-                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-            );
-            
-            CREATE TABLE item_urls (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id INTEGER,
-                url TEXT NOT NULL,
-                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-            );
-        """
-        db.executescript(schema_sql)
+        # Create all tables
+        db.drop_all()
+        db.create_all()
+        
         # Add a default category if none exist
-        cursor = db.execute("SELECT COUNT(id) FROM categories")
-        if cursor.fetchone()[0] == 0:
-            db.execute("INSERT INTO categories (name) VALUES (?)", ('Uncategorized',))
-        db.commit()
+        if not Category.query.first():
+            default_category = Category(name='Uncategorized')
+            db.session.add(default_category)
+            db.session.commit()
 
 def ensure_db_initialized():
-    # Check if database exists and initialize it if needed
-    db_path = app.config['DATABASE']
+    """Check if database needs initialization and do it if needed"""
+    db_path = os.path.join(app.root_path, 'collectibles.db')
     needs_init = False
     
     if not os.path.exists(db_path):
         needs_init = True
     else:
         try:
-            conn = sqlite3.connect(db_path)
-            cur = conn.cursor()
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='items'")
-            if not cur.fetchone():
-                needs_init = True
-            conn.close()
+            with app.app_context():
+                # Try to query the database to check if tables exist
+                Category.query.first()
         except Exception:
             needs_init = True
     
@@ -150,9 +101,7 @@ def uploaded_file(filename):
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
     # Publicly fetches all categories for filtering and forms.
-    db = get_db()
-    cursor = db.execute("SELECT * FROM categories ORDER BY name")
-    categories = [dict(row) for row in cursor.fetchall()]
+    categories = [category.to_dict() for category in Category.query.order_by(Category.name).all()]
     return jsonify(categories)
 
 @app.route('/api/categories', methods=['POST'])
@@ -162,146 +111,235 @@ def add_category():
     data = request.get_json()
     if not data or not data.get('name'):
         return jsonify({'error': 'Category name is required'}), 400
+    
     try:
-        db = get_db()
-        cursor = db.execute("INSERT INTO categories (name) VALUES (?)", (data['name'],))
-        db.commit()
-        return jsonify({'id': cursor.lastrowid, 'name': data['name']}), 201
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Category already exists'}), 409
+        new_category = Category(name=data['name'])
+        
+        # Add specifications schema if provided
+        if 'specifications_schema' in data:
+            new_category.set_specifications_schema(data['specifications_schema'])
+        else:
+            # Default empty schema
+            new_category.set_specifications_schema({})
+            
+        db.session.add(new_category)
+        db.session.commit()
+        return jsonify(new_category.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        # Check if this is a duplicate name error
+        if "UNIQUE constraint failed" in str(e):
+            return jsonify({'error': 'Category already exists'}), 409
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/categories/<int:id>', methods=['PUT'])
 @requires_auth
 def update_category(id):
-    # Renames a category and updates all related items.
+    # Updates a category including its name and specifications schema
     data = request.get_json()
     if not data or not data.get('name'):
         return jsonify({'error': 'Category name is required'}), 400
-    db = get_db()
+    
+    # Check if category exists
+    category = Category.query.get(id)
+    if not category:
+        return jsonify({'error': 'Category not found'}), 404
+        
     # Check if new name already exists
-    cursor = db.execute("SELECT id FROM categories WHERE name = ? AND id != ?", (data['name'], id))
-    if cursor.fetchone():
+    existing = Category.query.filter(Category.name == data['name'], Category.id != id).first()
+    if existing:
         return jsonify({'error': 'Category name already exists'}), 409
-    db.execute("UPDATE categories SET name = ? WHERE id = ?", (data['name'], id))
-    db.commit()
-    return jsonify({'id': id, 'name': data['name']})
+    
+    # Update and save
+    category.name = data['name']
+    
+    # Update specifications schema if provided
+    if 'specifications_schema' in data:
+        category.set_specifications_schema(data['specifications_schema'])
+    
+    db.session.commit()
+    return jsonify(category.to_dict())
+
+@app.route('/api/categories/<int:id>/specifications_schema', methods=['GET'])
+def get_category_specifications_schema(id):
+    # Get specifications schema for a specific category
+    category = Category.query.get(id)
+    if not category:
+        return jsonify({'error': 'Category not found'}), 404
+    
+    return jsonify(category.get_specifications_schema())
+
+@app.route('/api/categories/<int:id>/specifications_schema', methods=['PUT'])
+@requires_auth
+def update_category_specifications_schema(id):
+    # Update specifications schema for a specific category
+    data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'Specifications schema is required'}), 400
+    
+    category = Category.query.get(id)
+    if not category:
+        return jsonify({'error': 'Category not found'}), 404
+    
+    try:
+        category.set_specifications_schema(data)
+        db.session.commit()
+        return jsonify(category.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # --- API: Items (Public) ---
-def get_full_item_details(item_id):
-    # Helper function to fetch all data for a single item.
-    db = get_db()
-    item_cursor = db.execute(
-        "SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id WHERE i.id = ?",
-        (item_id,)
-    )
-    row = item_cursor.fetchone()
-    if not row:
-        return None
-    item = dict(row)
-
-    photos_cursor = db.execute("SELECT file_path FROM item_photos WHERE item_id = ?", (item_id,))
-    item['photos'] = [p_row['file_path'] for p_row in photos_cursor.fetchall()]
-
-    urls_cursor = db.execute("SELECT url FROM item_urls WHERE item_id = ?", (item_id,))
-    item['urls'] = [u_row['url'] for u_row in urls_cursor.fetchall()]
-    
-    item['specifications'] = json.loads(item['specifications']) if item.get('specifications') else {}
-        
-    return item
-
 @app.route('/api/items', methods=['GET'])
 def get_items():
     # Fetches a list of all items, with optional category filtering.
-    db = get_db()
-    query = "SELECT i.id, i.name, i.brand, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id"
-    params = []
-    if request.args.get('category_id'):
-        query += " WHERE i.category_id = ?"
-        params.append(int(request.args.get('category_id')))
-    query += " ORDER BY i.name"
+    query = Item.query.join(Item.category, isouter=True)
     
-    items = [dict(row) for row in db.execute(query, params).fetchall()]
-
-    for item in items:
-        photo_cursor = db.execute("SELECT file_path FROM item_photos WHERE item_id = ? LIMIT 1", (item['id'],))
-        primary_photo = photo_cursor.fetchone()
-        item['primary_photo'] = primary_photo['file_path'] if primary_photo else None
-
+    if request.args.get('category_id'):
+        query = query.filter(Item.category_id == int(request.args.get('category_id')))
+    
+    query = query.order_by(Item.name)
+    items = [item.to_dict() for item in query.all()]
+    
     return jsonify(items)
 
 @app.route('/api/items/<int:id>', methods=['GET'])
 def get_item(id):
     # Fetches full details for a single item.
-    item = get_full_item_details(id)
+    item = Item.query.get(id)
     if item:
-        return jsonify(item)
+        return jsonify(item.to_dict())
     return jsonify({'error': 'Item not found'}), 404
 
 @app.route('/api/items', methods=['POST'])
 def add_item():
     # Adds a new item (now public).
-    db = get_db()
-    cursor = db.execute(
-        "INSERT INTO items (category_id, name, brand, serial_number, form_factor, description, specifications) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (request.form.get('category_id'), request.form.get('name'), request.form.get('brand'), request.form.get('serial_number'), request.form.get('form_factor'), request.form.get('description'), request.form.get('specifications', '{}'))
-    )
-    item_id = cursor.lastrowid
-
-    for url in request.form.getlist('urls[]'):
-        if url: db.execute("INSERT INTO item_urls (item_id, url) VALUES (?, ?)", (item_id, url))
+    try:
+        # Validate required fields
+        if not request.form.get('name'):
+            return jsonify({'error': 'Name is required'}), 400
+        if not request.form.get('category_id'):
+            return jsonify({'error': 'Category is required'}), 400
+        if not request.form.get('brand'):
+            return jsonify({'error': 'Brand is required'}), 400
+        
+        # Verify category exists
+        category_id = request.form.get('category_id')
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({'error': 'Selected category does not exist'}), 400
             
-    for file in request.files.getlist('photos[]'):
-        if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
-            filename = f"item_{item_id}_{file.filename}"
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            db.execute("INSERT INTO item_photos (item_id, file_path) VALUES (?, ?)", (item_id, filename))
-
-    db.commit()
-    return jsonify(get_full_item_details(item_id)), 201
+        # Create new item
+        new_item = Item(
+            category_id=category_id,
+            name=request.form.get('name'),
+            brand=request.form.get('brand'),
+            serial_number=request.form.get('serial_number'),
+            form_factor=request.form.get('form_factor'),
+            description=request.form.get('description')
+        )
+        
+        # Handle specification values properly
+        spec_values_json = request.form.get('specification_values', '{}')
+        new_item.set_specification_values(json.loads(spec_values_json))
+        
+        # Add URLs
+        for url in request.form.getlist('urls[]'):
+            if url:
+                new_item.urls.append(ItemUrl(url=url))
+        
+        # Add item to session before processing photos
+        db.session.add(new_item)
+        db.session.flush()  # This assigns an ID without committing
+        
+        # Process photos
+        for file in request.files.getlist('photos[]'):
+            if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
+                filename = f"item_{new_item.id}_{file.filename}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                new_item.photos.append(ItemPhoto(file_path=filename))
+        
+        # Commit all changes
+        db.session.commit()
+        return jsonify(new_item.to_dict()), 201
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/items/<int:id>', methods=['PUT'])
 def update_item(id):
     # Updates an existing item (now public).
-    db = get_db()
-    if not db.execute("SELECT id FROM items WHERE id = ?", (id,)).fetchone():
+    item = Item.query.get(id)
+    if not item:
         return jsonify({'error': 'Item not found'}), 404
-
-    db.execute(
-        "UPDATE items SET category_id=?, name=?, brand=?, serial_number=?, form_factor=?, description=?, specifications=? WHERE id = ?",
-        (request.form.get('category_id'), request.form.get('name'), request.form.get('brand'), request.form.get('serial_number'), request.form.get('form_factor'), request.form.get('description'), request.form.get('specifications', '{}'), id)
-    )
     
-    db.execute("DELETE FROM item_urls WHERE item_id = ?", (id,))
-    for url in request.form.getlist('urls[]'):
-        if url: db.execute("INSERT INTO item_urls (item_id, url) VALUES (?, ?)", (id, url))
-
-    for file in request.files.getlist('photos[]'):
-        if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
-            filename = f"item_{id}_{file.filename}"
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            db.execute("INSERT INTO item_photos (item_id, file_path) VALUES (?, ?)", (id, filename))
-
-    db.commit()
-    return jsonify(get_full_item_details(id))
+    try:
+        # Validate required fields
+        if not request.form.get('name'):
+            return jsonify({'error': 'Name is required'}), 400
+        if not request.form.get('category_id'):
+            return jsonify({'error': 'Category is required'}), 400
+        if not request.form.get('brand'):
+            return jsonify({'error': 'Brand is required'}), 400
+            
+        # Update basic item information
+        item.category_id = request.form.get('category_id')
+        item.name = request.form.get('name')
+        item.brand = request.form.get('brand')
+        item.serial_number = request.form.get('serial_number')
+        item.form_factor = request.form.get('form_factor')
+        item.description = request.form.get('description')
+        
+        # Handle specification values properly
+        spec_values_json = request.form.get('specification_values', '{}')
+        item.set_specification_values(json.loads(spec_values_json))
+        
+        # Update URLs: remove all existing and add new ones
+        ItemUrl.query.filter_by(item_id=id).delete()
+        for url in request.form.getlist('urls[]'):
+            if url:
+                item.urls.append(ItemUrl(url=url))
+        
+        # Add new photos if any
+        for file in request.files.getlist('photos[]'):
+            if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
+                filename = f"item_{id}_{file.filename}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                item.photos.append(ItemPhoto(file_path=filename))
+        
+        db.session.commit()
+        return jsonify(item.to_dict())
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/items/<int:id>', methods=['DELETE'])
 def delete_item(id):
     # Deletes an item (now public).
-    db = get_db()
-    photo_cursor = db.execute("SELECT file_path FROM item_photos WHERE item_id = ?", (id,))
-    for row in photo_cursor.fetchall():
-        try:
-            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], row['file_path']))
-        except OSError as e:
-            print(f"Error deleting file {row['file_path']}: {e}")
-
-    db.execute("DELETE FROM item_photos WHERE item_id = ?", (id,))
-    db.execute("DELETE FROM item_urls WHERE item_id = ?", (id,))
-    db.execute("DELETE FROM items WHERE id = ?", (id,))
-    db.commit()
+    item = Item.query.get(id)
+    if not item:
+        return jsonify({'error': 'Item not found'}), 404
     
-    return jsonify({'message': 'Item deleted'})
+    try:
+        # Delete physical photo files
+        for photo in item.photos:
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], photo.file_path))
+            except OSError as e:
+                print(f"Error deleting file {photo.file_path}: {e}")
+        
+        # Delete from database (cascade will handle related records)
+        db.session.delete(item)
+        db.session.commit()
+        
+        return jsonify({'message': 'Item deleted'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # --- Main Execution ---
 if __name__ == '__main__':
