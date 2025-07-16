@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    image: lucaplawliet/collectify-web:latest
+    container_name: collectify-app
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount the data directory for persistent database and uploads
+      - collectify-data:/app/data
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+    restart: always
+
+volumes:
+  collectify-data:

@@ -7,9 +7,15 @@ from models import db, Category, Item, ItemPhoto, ItemUrl
 
 # --- App & Config ---
 app = Flask(__name__, static_url_path='/static', static_folder='static', template_folder='templates')
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(app.root_path, 'collectibles.db')}"
+
+# Create data directory if it doesn't exist
+data_dir = os.path.join(app.root_path, 'data')
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(data_dir, 'collectibles.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(data_dir, 'uploads')
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Initialize the SQLAlchemy extension with our Flask app
@@ -32,8 +38,18 @@ def init_db():
 
 def ensure_db_initialized():
     """Check if database needs initialization and do it if needed"""
-    db_path = os.path.join(app.root_path, 'collectibles.db')
+    data_dir = os.path.join(app.root_path, 'data')
+    db_path = os.path.join(data_dir, 'collectibles.db')
     needs_init = False
+    
+    # Ensure data directory exists
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+        
+    # Ensure uploads directory exists
+    uploads_dir = os.path.join(data_dir, 'uploads')
+    if not os.path.exists(uploads_dir):
+        os.makedirs(uploads_dir)
     
     if not os.path.exists(db_path):
         needs_init = True
@@ -47,9 +63,6 @@ def ensure_db_initialized():
     
     if needs_init:
         print("[DB] Initializing database...")
-        # Ensure upload folder exists
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
         init_db()
         print("[DB] Database initialized.")
         return True
