@@ -1,8 +1,14 @@
 // Bootstrap-based JS for Collectify
-// Handles fetching categories/items, populating the grid, and modal form logic
+// This file manages the main UI logic for Collectify, including:
+// - Fetching categories and items from the backend
+// - Rendering the item gallery and modal forms
+// - Handling all user interactions for adding/editing items
+// - Managing dynamic specification fields and URLs
 
+// Main entry point: runs when the DOM is fully loaded
+// Sets up all UI elements, event listeners, and data fetching logic
 document.addEventListener('DOMContentLoaded', function () {
-    // Elements
+    // --- DOM ELEMENTS ---
     const categorySelect = document.getElementById('categorySelect');
     const itemGrid = document.getElementById('itemGrid');
     const itemForm = document.getElementById('itemForm');
@@ -13,14 +19,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const addUrlBtn = document.getElementById('addUrlBtn');
     const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
 
-    let categories = [];
-    let items = [];
-    let currentCategorySchema = {};  // Store current category's specification schema
-    let specValues = {};  // Store specification values for the current item
-    let urls = [];
+    // --- STATE VARIABLES ---
+    let categories = []; // List of all categories fetched from backend
+    let items = []; // List of all items fetched from backend
+    let currentCategorySchema = {};  // Current category's specification schema (for modal)
+    let specValues = {};  // Current specification values for the item being edited/added
+    let urls = []; // Current list of URLs for the item being edited/added
 
-    // Fetch categories, items and category specs schema
+    // --- DATA FETCHING FUNCTIONS ---
     function fetchCategories() {
+        // Fetch all categories from the backend and render dropdowns
         fetch('/api/categories')
             .then(res => res.json())
             .then(data => {
@@ -31,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function fetchCategorySpecsSchema(categoryId) {
+        // Fetch the specification schema for a given category (used for dynamic specs fields)
         if (!categoryId) {
             currentCategorySchema = {};
             renderSpecificationFields();
@@ -47,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function fetchItems(categoryId = '') {
+        // Fetch all items (optionally filtered by category) and render the item grid
         let url = '/api/items';
         if (categoryId) url += `?category_id=${categoryId}`;
         itemGrid.innerHTML = '<div class="text-center py-4">Loading items...</div>';
@@ -57,16 +67,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderItems();
             });
     }
-    // Render category dropdowns
+    // --- RENDERING FUNCTIONS ---
     function renderCategorySelect() {
+        // Render the main category filter dropdown (top of page)
         categorySelect.innerHTML = '<option value="">All Categories</option>' +
             categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
     }
     function renderCategoryField() {
+        // Render the category dropdown in the item modal form
         categoryField.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
     }
     // Render items grid
     function renderItems() {
+        // Render the grid of item cards (gallery view)
         if (!items.length) {
             itemGrid.innerHTML = '<div class="text-center py-4">No items found. Click "Add New Item" to get started!</div>';
             return;
@@ -89,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Attach event listeners for edit buttons
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
+            // When an edit button is clicked, open the modal for that item
             btn.addEventListener('click', function() {
                 const itemId = this.getAttribute('data-item-id');
                 const item = items.find(i => i.id == itemId);
@@ -100,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function openEditModal(item) {
+        // Open the modal for editing an item, pre-filling all fields
         // Fill modal fields with item data
         document.getElementById('itemModalLabel').textContent = 'Edit Item';
         document.getElementById('name').value = item.name || '';
@@ -110,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('desc').value = item.description || '';
 
         // Specifications
+        // Load specifications and URLs for the item
         specValues = item.specification_values || {};
         // URLs
         urls = (item.urls || []).map(u => ({ value: u.url || u }));
@@ -117,9 +133,10 @@ document.addEventListener('DOMContentLoaded', function () {
         renderUrls();
 
         // Show modal
+        // Show the modal dialog
         itemModal.show();
     }
-    // Modal form logic
+    // Reset the modal form to its default state (used for new item creation)
     function resetForm() {
         itemForm.reset();
         specValues = {};
@@ -133,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     function renderSpecificationFields() {
+        // Render the specification fields in the modal, based on the current category schema
         // Render specification fields based on the category's schema
         specificationsList.innerHTML = '';
         
@@ -188,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     function renderUrls() {
+        // Render the list of URL fields in the modal
         urlsList.innerHTML = urls.map((url, i) => `
             <div class="input-group mb-2">
                 <input type="url" class="form-control" placeholder="https://example.com" value="${url.value || ''}" data-index="${i}" data-type="url">
@@ -195,12 +214,14 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `).join('');
     }
-    // Event listeners
+    // --- EVENT LISTENERS ---
     categorySelect.addEventListener('change', function () {
+        // When the category filter dropdown changes, fetch items for that category
         fetchItems(this.value);
     });
     
     categoryField.addEventListener('change', function() {
+        // When category changes in the modal, fetch its specification schema and reset spec values
         // When category changes, fetch its specification schema
         specValues = {}; // Reset current spec values
         const categoryId = this.value;
@@ -213,11 +234,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     
     addUrlBtn.addEventListener('click', function () {
+        // Add a new empty URL field when the user clicks the add URL button
         urls.push({ value: '' });
         renderUrls();
     });
     
     specificationsList.addEventListener('input', function (e) {
+        // Update specValues when the user types in a specification field
         const specKey = e.target.dataset.specKey;
         if (specKey) {
             specValues[specKey] = e.target.value;
@@ -229,10 +252,12 @@ document.addEventListener('DOMContentLoaded', function () {
         addSpecBtn.style.display = 'none';
     }
     urlsList.addEventListener('input', function (e) {
+        // Update the urls array when the user types in a URL field
         const idx = e.target.dataset.index;
         if (e.target.dataset.type === 'url') urls[idx].value = e.target.value;
     });
     urlsList.addEventListener('click', function (e) {
+        // Remove a URL field when the user clicks the remove button
         if (e.target.dataset.action === 'remove-url') {
             urls.splice(e.target.dataset.index, 1);
             renderUrls();
@@ -240,6 +265,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     // Form submit
     itemForm.addEventListener('submit', function (e) {
+        // --- FORM VALIDATION ---
+        // Validate required fields before submitting
         e.preventDefault();
         
         // Client-side validation for required fields
@@ -274,11 +301,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return; // Stop form submission if validation fails
         }
         
+        // Build FormData for submission, including specs and URLs
         const formData = new FormData(itemForm);
         // Add specification values and urls
         formData.append('specification_values', JSON.stringify(specValues));
         urls.forEach(url => { if (url.value) formData.append('urls[]', url.value); });
         
+        // Submit the form via AJAX to the backend
         fetch('/api/items', {
             method: 'POST',
             body: formData
@@ -299,8 +328,11 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(err => alert('An error occurred: ' + err.message));
     });
     // Reset form when modal is shown
+    // Reset form when modal is shown (for new item)
     document.getElementById('itemModal').addEventListener('show.bs.modal', resetForm);
     // Initial load
+    // --- INITIALIZATION ---
+    // On page load, fetch categories and items for the gallery
     fetchCategories();
     fetchItems();
 });
