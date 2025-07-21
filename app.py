@@ -1,7 +1,7 @@
 import os
 import json
 from functools import wraps
-from flask import Flask, request, jsonify, Response, send_from_directory, render_template
+from flask import Flask, request, jsonify, Response, send_from_directory, render_template, abort, redirect
 from flask_sqlalchemy import SQLAlchemy
 from models import db, Category, Item, ItemPhoto, ItemUrl
 
@@ -93,11 +93,60 @@ def requires_auth(f):
 
 # --- Frontend Routes ---
 
+# Helper function to prepare items for template rendering
+def prepare_items_for_template(category_id=None):
+    # Query items, optionally filtered by category
+    query = Item.query.order_by(Item.name)
+    if category_id:
+        query = query.filter(Item.category_id == category_id)
+    
+    items = []
+    for it in query.all():
+        d = it.to_dict()
+        # Add computed fields
+        d['primary_photo_url'] = f"/uploads/{it.primary_photo}" if it.primary_photo else "https://placehold.co/600x400/eee/ccc?text=No+Image"
+        d['category_name'] = it.category.name if it.category else ''
+        d['specification_values'] = it.get_specification_values() if hasattr(it, 'get_specification_values') else {}
+        d['urls'] = [u.url for u in it.urls]
+        items.append(d)
+    return items
+
 # --- Frontend Routes with Jinja2 context ---
 @app.route('/')
 def index():
-    # Serves the main public page using Jinja2 template inheritance.
-    return render_template('index.html', page_title="My Collection")
+    # Serves the main public page with items and categories for server-side rendering.
+    ensure_db_initialized()
+    # Fetch categories
+    categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
+    # Get items from helper function
+    items = prepare_items_for_template()
+    return render_template('index.html', page_title="My Collection", categories=categories, items=items)
+
+# View item details page
+@app.route('/item/<int:id>')
+def view_item(id):
+    item = Item.query.get(id)
+    if not item:
+        abort(404)
+    primary_photo_url = f"/uploads/{item.primary_photo}" if getattr(item, 'primary_photo', None) else "https://placehold.co/600x400/eee/ccc?text=No+Image"
+    specifications = item.specification_values if hasattr(item, 'specification_values') else {}
+    try:
+        specifications = json.loads(specifications)
+    except json.JSONDecodeError:
+        specifications = {}
+    urls = [u.url for u in getattr(item, 'urls', [])] if hasattr(item, 'urls') else []
+    return render_template('view_item.html', item={
+        'id': item.id,
+        'name': item.name,
+        'brand': item.brand,
+        'category_name': item.category.name if item.category else '',
+        'serial_number': item.serial_number,
+        'form_factor': item.form_factor,
+        'description': item.description,
+        'primary_photo_url': primary_photo_url,
+        'specifications': specifications,
+        'urls': urls
+    })
 
 @app.route('/admin.html')
 @requires_auth
@@ -353,6 +402,76 @@ def delete_item(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+        
+@app.route('/item/<int:id>/edit', methods=['POST'])
+def edit_item_form(id):
+    """Handle item edit form submissions using POST method"""
+    item = Item.query.get(id)
+    if not item:
+        abort(404)
+        
+    try:
+        # Validate required fields
+        if not request.form.get('name'):
+            # Handle error and return to form with error message
+            categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
+            return render_template('index.html', 
+                                  error_message="Name is required", 
+                                  categories=categories,
+                                  items=prepare_items_for_template())
+        if not request.form.get('category_id'):
+            categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
+            return render_template('index.html', 
+                                  error_message="Category is required", 
+                                  categories=categories,
+                                  items=prepare_items_for_template())
+        if not request.form.get('brand'):
+            categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
+            return render_template('index.html', 
+                                  error_message="Brand is required", 
+                                  categories=categories,
+                                  items=prepare_items_for_template())
+            
+        # Update basic item information
+        item.category_id = request.form.get('category_id')
+        item.name = request.form.get('name')
+        item.brand = request.form.get('brand')
+        item.serial_number = request.form.get('serial_number')
+        item.form_factor = request.form.get('form_factor')
+        item.description = request.form.get('description')
+        
+        # Handle specification values properly
+        spec_values_json = request.form.get('specification_values', '{}')
+        try:
+            specs_dict = json.loads(spec_values_json)
+            item.set_specification_values(specs_dict)
+        except json.JSONDecodeError:
+            item.set_specification_values({})
+        
+        # Update URLs: remove all existing and add new ones
+        ItemUrl.query.filter_by(item_id=id).delete()
+        for url in request.form.getlist('urls[]'):
+            if url:
+                item.urls.append(ItemUrl(url=url))
+        
+        # Add new photos if any
+        for file in request.files.getlist('photos[]'):
+            if file and file.filename and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
+                filename = f"item_{id}_{file.filename}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                item.photos.append(ItemPhoto(file_path=filename))
+        
+        db.session.commit()
+        
+        # Redirect back to main page with success message
+        return redirect('/?success=Item+updated+successfully')
+    except Exception as e:
+        db.session.rollback()
+        categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
+        return render_template('index.html', 
+                              error_message=f"Error updating item: {str(e)}", 
+                              categories=categories,
+                              items=prepare_items_for_template())
 
 # --- Main Execution ---
 if __name__ == '__main__':

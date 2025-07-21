@@ -68,6 +68,11 @@ class Item(db.Model):
     
     def get_specification_values(self):
         return json.loads(self.specification_values) if self.specification_values else {}
+    
+    @property
+    def primary_photo(self):
+        """Return the file path of the primary photo, or None if no photos exist."""
+        return self.photos[0].file_path if self.photos else None
 
 
 class ItemPhoto(db.Model):

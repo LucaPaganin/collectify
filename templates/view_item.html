@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}View Item{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <a href="/" class="btn btn-outline-secondary mb-3">Back to Gallery</a>
+    <div class="card mb-4">
+        <img src="{{ item.primary_photo_url }}" class="card-img-top" alt="Item image">
+        <div class="card-body">
+            <h3 class="card-title">{{ item.name }}</h3>
+            <p class="card-text"><strong>Brand:</strong> {{ item.brand }}</p>
+            <p class="card-text"><strong>Category:</strong> {{ item.category_name }}</p>
+            <p class="card-text"><strong>Serial Number:</strong> {{ item.serial_number }}</p>
+            <p class="card-text"><strong>Form Factor:</strong> {{ item.form_factor }}</p>
+            <p class="card-text"><strong>Description:</strong> {{ item.description }}</p>
+            {% if item.specifications %}
+            <h5>Specifications</h5>
+            <ul>
+                {% for key, value in item.specifications.items() %}
+                <li><strong>{{ key }}:</strong> {{ value }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if item.urls %}
+            <h5>Related URLs</h5>
+            <ul>
+                {% for url in item.urls %}
+                <li><a href="{{ url }}" target="_blank">{{ url }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            <a href="/edit/{{ item.id }}" class="btn btn-warning">Edit Item</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

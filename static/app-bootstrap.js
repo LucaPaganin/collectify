@@ -79,10 +79,45 @@ document.addEventListener('DOMContentLoaded', function () {
                         <h5 class="card-title">${item.name}</h5>
                         <p class="card-text">${item.brand || 'N/A'}</p>
                         <span class="badge bg-secondary">${item.category_name}</span>
+                        <div class="mt-3 d-flex justify-content-end">
+                            <button class="btn btn-outline-primary btn-sm edit-item-btn" data-item-id="${item.id}">Edit/View</button>
+                        </div>
                     </div>
                 </div>
             </div>
         `).join('');
+
+        // Attach event listeners for edit buttons
+        document.querySelectorAll('.edit-item-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const itemId = this.getAttribute('data-item-id');
+                const item = items.find(i => i.id == itemId);
+                if (item) {
+                    openEditModal(item);
+                }
+            });
+        });
+    }
+
+    function openEditModal(item) {
+        // Fill modal fields with item data
+        document.getElementById('itemModalLabel').textContent = 'Edit Item';
+        document.getElementById('name').value = item.name || '';
+        document.getElementById('category').value = item.category_id || '';
+        document.getElementById('brand').value = item.brand || '';
+        document.getElementById('serial').value = item.serial_number || '';
+        document.getElementById('form_factor').value = item.form_factor || '';
+        document.getElementById('desc').value = item.description || '';
+
+        // Specifications
+        specValues = item.specification_values || {};
+        // URLs
+        urls = (item.urls || []).map(u => ({ value: u.url || u }));
+        renderSpecificationFields();
+        renderUrls();
+
+        // Show modal
+        itemModal.show();
     }
     // Modal form logic
     function resetForm() {

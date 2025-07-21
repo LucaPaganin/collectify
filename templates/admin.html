@@ -6,6 +6,15 @@
         <h1 class="mb-0">Admin Panel</h1>
         <a href="/" class="btn btn-outline-secondary">Back to Public View</a>
     </div>
+        <!-- Snackbar for notifications -->
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+            <div id="snackbar" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body" id="snackbar-body">Notification</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
     
     <!-- Modal for editing specification schemas -->
     <div class="modal fade" id="specsModal" tabindex="-1" aria-labelledby="specsModalLabel" aria-hidden="true">
@@ -61,6 +70,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const currentCategoryName = document.getElementById('currentCategoryName');
     
     let categories = [];
+    
+    // Snackbar helper
+    function showSnackbar(message) {
+        const snackbarEl = document.getElementById('snackbar');
+        document.getElementById('snackbar-body').textContent = message;
+        const toast = new bootstrap.Toast(snackbarEl);
+        toast.show();
+    }
     let currentCategoryId = null;
     let currentSpecs = {};
 
@@ -212,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderCategories();
             newCategoryName.value = '';
         })
-        .catch(err => alert(err.message));
+    .catch(err => showSnackbar(err.message));
     });
     categoryList.addEventListener('click', function (e) {
         // Delete
@@ -230,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     categories = categories.filter(c => c.id != id);
                     renderCategories();
                 })
-                .catch(err => alert(err.message));
+                .catch(err => showSnackbar(err.message));
         }
         
         // Edit Specifications
@@ -274,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (cat) cat.name = updated.name;
                     renderCategories();
                 })
-                .catch(err => alert(err.message));
+                .catch(err => showSnackbar(err.message));
             }
         }
     });
@@ -357,10 +374,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return res.json();
         })
         .then(() => {
-            alert('Specifications schema saved successfully!');
+            showSnackbar('Specifications schema saved successfully!');
             specsModal.hide();
         })
-        .catch(err => alert(err.message));
+    .catch(err => showSnackbar(err.message));
     });
     
     fetchCategories();
