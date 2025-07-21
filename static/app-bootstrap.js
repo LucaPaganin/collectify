@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentCategorySchema = {};  // Current category's specification schema (for modal)
     let specValues = {};  // Current specification values for the item being edited/added
     let urls = []; // Current list of URLs for the item being edited/added
+    let viewMode = localStorage.getItem('collectifyViewPreference') || 'gallery'; // Track current view mode - 'gallery' or 'list'
 
     // --- DATA FETCHING FUNCTIONS ---
     function fetchCategories() {
@@ -73,21 +74,29 @@ document.addEventListener('DOMContentLoaded', function () {
         categorySelect.innerHTML = '<option value="">All Categories</option>' +
             categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
     }
+    
     function renderCategoryField() {
         // Render the category dropdown in the item modal form
         categoryField.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
     }
-    // Render items grid
+    
+    // Render both views of items (grid and list)
     function renderItems() {
-        // Render the grid of item cards (gallery view)
+        // Exit early if there are no items
         if (!items.length) {
-            itemGrid.innerHTML = '<div class="text-center py-4">No items found. Click "Add New Item" to get started!</div>';
+            const noItemsMessage = '<div class="text-center py-4">No items found. Click "Add New Item" to get started!</div>';
+            itemGrid.innerHTML = noItemsMessage;
+            document.getElementById('itemList').innerHTML = noItemsMessage;
             return;
         }
+        
+        // Render the grid view (cards)
         itemGrid.innerHTML = items.map(item => `
-            <div class="col-md-4">
+            <div class="col-md-4 mb-4">
                 <div class="card h-100">
-                    <img src="${item.primary_photo ? '/uploads/' + item.primary_photo : 'https://placehold.co/600x400/eee/ccc?text=No+Image'}" class="card-img-top" alt="Item image">
+                    <img src="${item.primary_photo ? '/uploads/' + item.primary_photo : 'https://placehold.co/600x400/eee/ccc?text=No+Image'}" 
+                         class="card-img-top" alt="${item.name}" 
+                         style="height:200px; object-fit:cover;">
                     <div class="card-body">
                         <h5 class="card-title">${item.name}</h5>
                         <p class="card-text">${item.brand || 'N/A'}</p>
@@ -99,10 +108,57 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         `).join('');
+        
+        // Render list view
+        const itemList = document.getElementById('itemList');
+        if (itemList) {
+            const table = document.createElement('table');
+            table.className = 'table table-striped table-hover';
+            
+            // Table header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th style="width: 80px">Image</th>
+                    <th>Name</th>
+                    <th>Brand</th>
+                    <th>Category</th>
+                    <th>Serial #</th>
+                    <th>Form Factor</th>
+                    <th>Actions</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // Table body
+            const tbody = document.createElement('tbody');
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <img src="${item.primary_photo ? '/uploads/' + item.primary_photo : 'https://placehold.co/600x400/eee/ccc?text=No+Image'}" 
+                             alt="${item.name}" class="img-thumbnail" 
+                             style="width:60px; height:60px; object-fit:cover;">
+                    </td>
+                    <td>${item.name}</td>
+                    <td>${item.brand || 'N/A'}</td>
+                    <td><span class="badge bg-secondary">${item.category_name}</span></td>
+                    <td>${item.serial_number || 'N/A'}</td>
+                    <td>${item.form_factor || 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm edit-item-btn" data-item-id="${item.id}">Edit/View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            
+            itemList.innerHTML = '';
+            itemList.appendChild(table);
+        }
 
-        // Attach event listeners for edit buttons
+        // Attach event listeners for all edit buttons
         document.querySelectorAll('.edit-item-btn').forEach(btn => {
-            // When an edit button is clicked, open the modal for that item
             btn.addEventListener('click', function() {
                 const itemId = this.getAttribute('data-item-id');
                 const item = items.find(i => i.id == itemId);
@@ -214,7 +270,60 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `).join('');
     }
+    // --- VIEW SWITCHING ---
+    // Function to switch between gallery and list views
+    function switchView(viewType) {
+        // Update button state
+        document.getElementById('galleryViewBtn').classList.toggle('active', viewType === 'gallery');
+        document.getElementById('listViewBtn').classList.toggle('active', viewType === 'list');
+        
+        // Show/hide appropriate view container
+        const itemGridEl = document.getElementById('itemGrid');
+        const itemListEl = document.getElementById('itemList');
+        
+        if (itemGridEl) {
+            itemGridEl.style.display = viewType === 'gallery' ? 'flex' : 'none';
+            itemGridEl.classList.toggle('row', viewType === 'gallery');
+            itemGridEl.classList.toggle('g-4', viewType === 'gallery');
+        }
+        
+        if (itemListEl) {
+            itemListEl.style.display = viewType === 'list' ? 'block' : 'none';
+        }
+        
+        // Update current view state
+        viewMode = viewType;
+        
+        // Store preference in local storage
+        localStorage.setItem('collectifyViewPreference', viewType);
+    }
+
     // --- EVENT LISTENERS ---
+    // Add event listeners for view toggle buttons
+    const galleryViewBtn = document.getElementById('galleryViewBtn');
+    const listViewBtn = document.getElementById('listViewBtn');
+    
+    if (galleryViewBtn && listViewBtn) {
+        galleryViewBtn.addEventListener('click', function() {
+            switchView('gallery');
+        });
+        
+        listViewBtn.addEventListener('click', function() {
+            switchView('list');
+        });
+    }
+    
+    // Initialize view preference from local storage
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedViewPreference = localStorage.getItem('collectifyViewPreference');
+        if (savedViewPreference) {
+            switchView(savedViewPreference);
+        } else {
+            // Default to gallery view if no preference is saved
+            switchView('gallery');
+        }
+    });
+    
     categorySelect.addEventListener('change', function () {
         // When the category filter dropdown changes, fetch items for that category
         fetchItems(this.value);

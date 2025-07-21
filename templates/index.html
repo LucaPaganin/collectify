@@ -23,16 +23,27 @@
             <a href="/admin.html" class="btn btn-outline-secondary">Manage Categories</a>
         </div>
         <div class="row mb-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <select class="form-select" id="categorySelect">
                     <option value="">All Categories</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#itemModal">Add New Item</button>
             </div>
+            <div class="col-md-6 d-flex justify-content-end">
+                <div class="btn-group" role="group" aria-label="View Toggle">
+                    <button type="button" class="btn btn-outline-secondary active" id="galleryViewBtn">
+                        <i class="bi bi-grid-3x3-gap-fill"></i> Gallery
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="listViewBtn">
+                        <i class="bi bi-list-ul"></i> List
+                    </button>
+                </div>
+            </div>
         </div>
-    <div id="itemGrid" class="row g-3">
+    <!-- Gallery View -->
+    <div id="itemGrid" class="row g-3 view-container">
       {% for item in items %}
       <div class="col-md-4">
         <div class="card h-100">
@@ -53,6 +64,40 @@
         </div>
       </div>
       {% endfor %}
+    </div>
+    <!-- List View -->
+    <div id="itemList" class="view-container" style="display:none;">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Brand</th>
+            <th>Category</th>
+            <th>Serial Number</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td><img src="{{ item.primary_photo_url }}" alt="Item image" style="width:80px;height:60px;object-fit:cover;"></td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.brand or 'N/A' }}</td>
+            <td><span class="badge bg-secondary">{{ item.category_name }}</span></td>
+            <td>{{ item.serial_number or 'N/A' }}</td>
+            <td>
+              <button type="button"
+                class="btn btn-outline-primary btn-sm" 
+                data-bs-toggle="modal" data-bs-target="#itemModal"
+                data-item='{{ item|tojson | safe }}'>
+                Edit/View
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     </div>
 

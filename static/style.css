@@ -19,3 +19,75 @@
     width: 80px;
     height: 60px;
 }
+
+/* View switching styles */
+/* Grid view */
+#itemGrid {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#itemGrid.view-container[style*="display: none"] {
+    display: none !important;
+}
+
+#itemGrid.view-container {
+    display: flex !important;
+}
+
+/* List view */
+#itemList {
+    margin-top: 1rem;
+}
+
+#itemList table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#itemList th {
+    background-color: #f8f9fa;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #e9ecef;
+}
+
+#itemList td {
+    padding: 12px 15px;
+    vertical-align: middle;
+}
+
+#itemList tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+#itemList img.img-thumbnail {
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+/* View switching buttons */
+.btn-group .btn.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+/* Animation for view switching */
+.view-container {
+    transition: opacity 0.3s ease;
+}
+
+.view-container.fade-out {
+    opacity: 0;
+}
+
+.view-container.fade-in {
+    opacity: 1;
+}
