@@ -14,8 +14,10 @@ def register_frontend_routes(app):
         """Serves the main public page with items and categories for server-side rendering."""
         # Fetch categories
         categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
-        # Get items from helper function
-        items = prepare_items_for_template()
+        # Get category filter from request args
+        category_id = request.args.get('category_id')
+        # Get items from helper function with optional category filter
+        items = prepare_items_for_template(category_id)
         return render_template('index.html', page_title="My Collection", categories=categories, items=items)
 
     @app.route('/item/<int:id>')
