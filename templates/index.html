@@ -176,7 +176,15 @@
                 </div>
                 <div class="col-12">
                   <label class="form-label">Photos</label>
-                  <input type="file" class="form-control" id="photos" name="photos[]" multiple accept="image/*">
+                  <div class="input-group">
+                    <input type="file" class="form-control" id="photos" name="photos[]" multiple accept="image/*">
+                    <button type="button" class="btn btn-primary" id="takePictureBtn">
+                      <i class="bi bi-camera"></i> Take Photo
+                    </button>
+                  </div>
+                  <div id="capturedImagesPreview" class="d-flex flex-wrap gap-2 mt-2">
+                    <!-- Captured images will be shown here -->
+                  </div>
                 </div>
               </div>
               <div class="mt-3">
@@ -239,8 +247,38 @@
   </div>
 </div>
 
+<!-- Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cameraModalLabel">Take a Photo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="camera-container">
+          <video id="cameraFeed" class="w-100" autoplay playsinline></video>
+          <canvas id="photoCanvas" class="d-none"></canvas>
+        </div>
+        <div class="text-center mt-3" id="cameraErrorMessage" style="display: none;">
+          <div class="alert alert-warning">
+            Camera access denied or not available. Please check your camera permissions.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="capturePhotoBtn">
+          <i class="bi bi-camera"></i> Capture Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/static/app-bootstrap.js"></script>
 <script src="/static/item-modal-handler.js"></script>
 <script src="/static/item-delete-handler.js"></script>
 <script src="/static/form-submit-handler.js"></script>
+<script src="/static/camera-handler.js"></script>
 {% endblock %}
