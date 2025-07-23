@@ -5,6 +5,7 @@ from utils.database import ensure_db_initialized
 from routes.frontend import register_frontend_routes
 from routes.categories import register_category_routes
 from routes.items import register_item_routes
+from flask_cli import register_commands
 
 # Create the Flask application
 app = create_app()
@@ -16,6 +17,15 @@ db.init_app(app)
 register_frontend_routes(app)
 register_category_routes(app)
 register_item_routes(app)
+
+# Register a function to run before the first request to initialize the database
+@app.before_first_request
+def initialize_database():
+    """Initialize the database before the first request if needed."""
+    ensure_db_initialized(app)
+    
+# Register CLI commands
+register_commands(app)
 
 # --- Main Execution ---
 if __name__ == '__main__':
