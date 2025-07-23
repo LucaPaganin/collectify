@@ -92,12 +92,19 @@ document.addEventListener('DOMContentLoaded', function () {
         // Render the specification fields in the modal, based on the current category schema
         specificationsList.innerHTML = '';
         
-        if (!window.currentCategorySchema || Object.keys(window.currentCategorySchema).length === 0) {
+        // Check if we have new or old format schema
+        const isArraySchema = Array.isArray(window.currentCategorySchema);
+        const schemaIsEmpty = isArraySchema 
+            ? window.currentCategorySchema.length === 0 
+            : Object.keys(window.currentCategorySchema).length === 0;
+        
+        if (!window.currentCategorySchema || schemaIsEmpty) {
             specificationsList.innerHTML = '<p class="text-muted">No specifications defined for this category.</p>';
             return;
         }
         
-        for (const [key, spec] of Object.entries(window.currentCategorySchema)) {
+        // Function to render a single specification field
+        const renderSpecField = (key, spec) => {
             const value = window.specValues[key] || '';
             let fieldHtml = '';
             
@@ -141,6 +148,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             specificationsList.innerHTML += fieldHtml;
+        };
+        
+        if (isArraySchema) {
+            // Sort specifications by display_order
+            window.currentCategorySchema
+                .slice()
+                .sort((a, b) => a.display_order - b.display_order)
+                .forEach(spec => {
+                    renderSpecField(spec.key, spec);
+                });
+        } else {
+            // Legacy format - object with key-value pairs
+            for (const [key, spec] of Object.entries(window.currentCategorySchema)) {
+                renderSpecField(key, spec);
+            }
         }
         
         // Add event listeners to update specValues when fields change

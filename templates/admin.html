@@ -1,5 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Admin Panel - Categories{% endblock %}
+{% block head %}
+<style>
+    /* Additional styles for admin panel */
+    .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .admin-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    /* Drag and drop styling */
+    .spec-field {
+        cursor: move;
+        transition: box-shadow 0.3s ease, transform 0.2s ease;
+    }
+    
+    .spec-field.dragging {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        opacity: 0.8;
+        transform: scale(1.02);
+        z-index: 100;
+    }
+    
+    .drag-handle {
+        cursor: grab;
+        font-size: 1.2em;
+        color: #6c757d;
+        padding: 5px;
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -107,15 +146,74 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderSpecsEditor() {
         specsContainer.innerHTML = '';
         
-        // Display existing specs
-        for (const [key, spec] of Object.entries(currentSpecs)) {
-            addSpecFieldToEditor(key, spec);
+        // Check if we have new-style array or old-style object
+        if (Array.isArray(currentSpecs)) {
+            // Sort by display_order
+            currentSpecs.sort((a, b) => a.display_order - b.display_order);
+            
+            // Display existing specs in order
+            for (const spec of currentSpecs) {
+                addSpecFieldToEditor(spec.key, spec);
+            }
+        } else {
+            // Legacy format - object with key-value pairs
+            for (const [key, spec] of Object.entries(currentSpecs)) {
+                addSpecFieldToEditor(key, spec);
+            }
         }
         
         // If no specs, show a message
-        if (Object.keys(currentSpecs).length === 0) {
+        if ((Array.isArray(currentSpecs) && currentSpecs.length === 0) || 
+            (!Array.isArray(currentSpecs) && Object.keys(currentSpecs).length === 0)) {
             specsContainer.innerHTML = '<p class="text-muted">No specifications defined yet. Click the button below to add one.</p>';
         }
+        
+        // Initialize drag-and-drop for reordering
+        initDragAndDrop();
+    }
+    
+    function initDragAndDrop() {
+        const specFields = document.querySelectorAll('.spec-field');
+        
+        specFields.forEach(field => {
+            field.setAttribute('draggable', 'true');
+            
+            field.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', field.dataset.fieldId);
+                field.classList.add('dragging');
+            });
+            
+            field.addEventListener('dragend', () => {
+                field.classList.remove('dragging');
+            });
+            
+            field.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(specsContainer, e.clientY);
+                const dragging = document.querySelector('.dragging');
+                
+                if (afterElement === null) {
+                    specsContainer.appendChild(dragging);
+                } else {
+                    specsContainer.insertBefore(dragging, afterElement);
+                }
+            });
+        });
+    }
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.spec-field:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
     
     function addSpecFieldToEditor(key = '', spec = {}) {
@@ -123,10 +221,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const fieldType = spec.type || 'text';
         
         const fieldHtml = `
-            <div class="card mb-3 spec-field" data-field-id="${fieldId}">
+            <div class="card mb-3 spec-field" data-field-id="${fieldId}" data-display-order="${spec.display_order || 0}">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between mb-3">
-                        <h6 class="card-title">Specification Field</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="drag-handle me-2" title="Drag to reorder">
+                                <i class="bi bi-grip-vertical"></i>
+                            </div>
+                            <h6 class="card-title mb-0">Specification Field</h6>
+                        </div>
                         <button type="button" class="btn btn-sm btn-outline-danger remove-spec-btn" data-field-id="${fieldId}">Remove</button>
                     </div>
                     <div class="row g-3">
@@ -313,18 +416,20 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Save specifications schema
     saveSpecsBtn.addEventListener('click', function() {
-        const schema = {};
+        const schema = [];
         const fields = document.querySelectorAll('.spec-field');
         
-        fields.forEach(field => {
+        fields.forEach((field, index) => {
             const key = field.querySelector('.spec-key').value.trim();
             
             if (key) {
                 const fieldType = field.querySelector('.spec-type').value;
                 const spec = {
+                    key: key,
                     type: fieldType,
                     label: field.querySelector('.spec-label').value.trim(),
-                    placeholder: field.querySelector('.spec-placeholder').value.trim()
+                    placeholder: field.querySelector('.spec-placeholder').value.trim(),
+                    display_order: index // Use the current order in the DOM
                 };
                 
                 // Add specific properties based on field type
@@ -357,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 
-                schema[key] = spec;
+                schema.push(spec);
             }
         });
         

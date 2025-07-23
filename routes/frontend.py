@@ -26,25 +26,16 @@ def register_frontend_routes(app):
         item = Item.query.get(id)
         if not item:
             abort(404)
-        primary_photo_url = f"/uploads/{item.primary_photo}" if getattr(item, 'primary_photo', None) else "https://placehold.co/600x400/eee/ccc?text=No+Image"
-        specifications = item.specification_values if hasattr(item, 'specification_values') else {}
-        try:
-            specifications = json.loads(specifications)
-        except json.JSONDecodeError:
-            specifications = {}
-        urls = [u.url for u in getattr(item, 'urls', [])] if hasattr(item, 'urls') else []
-        return render_template('view_item.html', item={
-            'id': item.id,
-            'name': item.name,
-            'brand': item.brand,
-            'category_name': item.category.name if item.category else '',
-            'serial_number': item.serial_number,
-            'form_factor': item.form_factor,
-            'description': item.description,
-            'primary_photo_url': primary_photo_url,
-            'specifications': specifications,
-            'urls': urls
-        })
+            
+        item_dict = item.to_dict()
+        
+        # Ensure we have a primary_photo_url for display
+        if item.primary_photo:
+            item_dict['primary_photo_url'] = f"/uploads/{item.primary_photo}"
+        else:
+            item_dict['primary_photo_url'] = "https://placehold.co/600x400/eee/ccc?text=No+Image"
+            
+        return render_template('view_item.html', item=item_dict)
 
     @app.route('/admin.html')
     @requires_auth

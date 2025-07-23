@@ -12,10 +12,18 @@
             <p class="card-text"><strong>Serial Number:</strong> {{ item.serial_number }}</p>
             <p class="card-text"><strong>Form Factor:</strong> {{ item.form_factor }}</p>
             <p class="card-text"><strong>Description:</strong> {{ item.description }}</p>
-            {% if item.specifications %}
+            {% if item.ordered_specifications %}
             <h5>Specifications</h5>
             <ul>
-                {% for key, value in item.specifications.items() %}
+                {% for spec in item.ordered_specifications %}
+                <li><strong>{{ spec.label }}:</strong> {{ spec.value }}</li>
+                {% endfor %}
+            </ul>
+            {% elif item.specification_values %}
+            <!-- Fallback for backward compatibility -->
+            <h5>Specifications</h5>
+            <ul>
+                {% for key, value in item.specification_values.items() %}
                 <li><strong>{{ key }}:</strong> {{ value }}</li>
                 {% endfor %}
             </ul>

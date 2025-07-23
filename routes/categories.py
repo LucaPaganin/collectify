@@ -90,9 +90,16 @@ def register_category_routes(app):
             return jsonify({'error': 'Category not found'}), 404
         
         try:
+            # Handle both array and dictionary formats
             category.set_specifications_schema(data)
             db.session.commit()
-            return jsonify(category.to_dict())
+            
+            # Return the schema in the same format it was received
+            response_data = category.to_dict()
+            if isinstance(data, list):
+                response_data['specifications_schema'] = category.specifications
+                
+            return jsonify(response_data)
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500

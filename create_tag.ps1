@@ -3,7 +3,7 @@ if (-not $tagMessage) {
     Write-Host "Usage: create_tag.ps1 <tag-message>"
     exit 1
 }
-$tagValue = "v" + (Get-Date -Format "yyyyMMddHHmmss")
+$tagValue = "v" + (Get-Date -Format "yyyyMMddTHHmmss")
 Write-Host "Creating tag: $tagValue with message: $tagMessage"
 
 git tag -a $tagValue -m $tagMessage
