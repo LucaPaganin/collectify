@@ -21,6 +21,11 @@ def register_category_routes(app):
             return jsonify({'error': 'Category name is required'}), 400
         
         try:
+            # Check for duplicate name before creating
+            existing = Category.query.filter_by(name=data['name']).first()
+            if existing:
+                return jsonify({'error': 'Category already exists'}), 400
+                
             new_category = Category(name=data['name'])
             
             # Add specifications schema if provided
@@ -28,35 +33,32 @@ def register_category_routes(app):
                 new_category.set_specifications_schema(data['specifications_schema'])
             else:
                 # Default empty schema
-                new_category.set_specifications_schema({})
+                new_category.set_specifications_schema([])
                 
             db.session.add(new_category)
             db.session.commit()
             return jsonify(new_category.to_dict()), 201
         except Exception as e:
             db.session.rollback()
-            # Check if this is a duplicate name error
-            if "UNIQUE constraint failed" in str(e):
-                return jsonify({'error': 'Category already exists'}), 409
             return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/categories/<int:id>', methods=['PUT'])
+    @app.route('/api/categories/<int:category_id>', methods=['PUT'])
     @requires_auth
-    def update_category(id):
-        """Updates a category including its name and specifications schema."""
+    def update_category(category_id):
+        """Updates a category."""
         data = request.get_json()
         if not data or not data.get('name'):
             return jsonify({'error': 'Category name is required'}), 400
         
         # Check if category exists
-        category = Category.query.get(id)
+        category = Category.query.get(category_id)
         if not category:
             return jsonify({'error': 'Category not found'}), 404
             
         # Check if new name already exists
-        existing = Category.query.filter(Category.name == data['name'], Category.id != id).first()
+        existing = Category.query.filter(Category.name == data['name'], Category.id != category_id).first()
         if existing:
-            return jsonify({'error': 'Category name already exists'}), 409
+            return jsonify({'error': 'Category name already exists'}), 400
         
         # Update and save
         category.name = data['name']
@@ -67,25 +69,41 @@ def register_category_routes(app):
         
         db.session.commit()
         return jsonify(category.to_dict())
+    
+    @app.route('/api/categories/<int:category_id>', methods=['DELETE'])
+    @requires_auth
+    def delete_category(category_id):
+        """Deletes a category."""
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({'error': 'Category not found'}), 404
+        
+        try:
+            db.session.delete(category)
+            db.session.commit()
+            return jsonify({'result': 'success'}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/categories/<int:id>/specifications_schema', methods=['GET'])
-    def get_category_specifications_schema(id):
+    @app.route('/api/categories/<int:category_id>/specifications_schema', methods=['GET'])
+    def get_category_specifications_schema(category_id):
         """Get specifications schema for a specific category."""
-        category = Category.query.get(id)
+        category = Category.query.get(category_id)
         if not category:
             return jsonify({'error': 'Category not found'}), 404
         
         return jsonify(category.get_specifications_schema())
 
-    @app.route('/api/categories/<int:id>/specifications_schema', methods=['PUT'])
+    @app.route('/api/categories/<int:category_id>/specifications_schema', methods=['PUT'])
     @requires_auth
-    def update_category_specifications_schema(id):
+    def update_category_specifications_schema(category_id):
         """Update specifications schema for a specific category."""
         data = request.get_json()
         if data is None:
             return jsonify({'error': 'Specifications schema is required'}), 400
         
-        category = Category.query.get(id)
+        category = Category.query.get(category_id)
         if not category:
             return jsonify({'error': 'Category not found'}), 404
         
@@ -94,12 +112,21 @@ def register_category_routes(app):
             category.set_specifications_schema(data)
             db.session.commit()
             
-            # Return the schema in the same format it was received
-            response_data = category.to_dict()
-            if isinstance(data, list):
-                response_data['specifications_schema'] = category.specifications
-                
-            return jsonify(response_data)
+            # Return the specifications schema directly as a list
+            # This matches what the tests expect
+            return jsonify(category.get_specifications_schema()), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
+            
+    # Add compatibility routes for tests
+    @app.route('/api/categories/<int:category_id>/specifications', methods=['GET'])
+    def get_category_specifications(category_id):
+        """Get specifications schema for a specific category (compatibility route)."""
+        return get_category_specifications_schema(category_id)
+
+    @app.route('/api/categories/<int:category_id>/specifications', methods=['PUT'])
+    @requires_auth
+    def update_category_specifications(category_id):
+        """Update specifications schema for a specific category (compatibility route)."""
+        return update_category_specifications_schema(category_id)

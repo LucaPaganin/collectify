@@ -16,6 +16,8 @@ def register_frontend_routes(app):
         categories = [c.to_dict() for c in Category.query.order_by(Category.name).all()]
         # Get category filter from request args
         category_id = request.args.get('category_id')
+        # Get search term from request args
+        search_term = request.args.get('search')
         # Get items from helper function with optional category filter
         items = prepare_items_for_template(category_id)
         return render_template('index.html', page_title="My Collection", categories=categories, items=items)

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- DOM ELEMENTS ---
     const categorySelect = document.getElementById('categorySelect');
     const specificationsList = document.getElementById('specificationsList');
+    const searchBox = document.getElementById('searchBox');
     
     // --- STATE VARIABLES ---
     window.currentCategorySchema = {};  // Current category's specification schema (for modal)
@@ -63,6 +64,31 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         // Default to gallery view if no preference is saved
         switchView('gallery');
+    }
+    
+    // Search functionality
+    if (searchBox) {
+        searchBox.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const itemCards = document.querySelectorAll('.card');
+            const itemRows = document.querySelectorAll('#itemList tbody tr');
+            
+            // Filter gallery view items
+            itemCards.forEach(card => {
+                const itemName = card.querySelector('.card-title').textContent.toLowerCase();
+                const itemBrand = card.querySelector('.card-text').textContent.toLowerCase();
+                const isMatch = itemName.includes(searchTerm) || itemBrand.includes(searchTerm);
+                card.parentElement.style.display = isMatch ? '' : 'none';
+            });
+            
+            // Filter list view items
+            itemRows.forEach(row => {
+                const itemName = row.cells[2].textContent.toLowerCase();
+                const itemBrand = row.cells[3].textContent.toLowerCase();
+                const isMatch = itemName.includes(searchTerm) || itemBrand.includes(searchTerm);
+                row.style.display = isMatch ? '' : 'none';
+            });
+        });
     }
     
     // Filter items by category

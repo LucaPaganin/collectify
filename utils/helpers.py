@@ -1,5 +1,7 @@
 """Helper functions for routes."""
+from flask import request
 from models import Item
+from sqlalchemy import or_
 
 def prepare_items_for_template(category_id=None):
     """Helper function to prepare items for template rendering."""
@@ -7,6 +9,18 @@ def prepare_items_for_template(category_id=None):
     query = Item.query.order_by(Item.name)
     if category_id:
         query = query.filter(Item.category_id == category_id)
+        
+    # Apply search filter if present
+    search_term = request.args.get('search')
+    if search_term:
+        # Filter by name, brand, or description containing search term
+        query = query.filter(
+            or_(
+                Item.name.ilike(f'%{search_term}%'),
+                Item.brand.ilike(f'%{search_term}%'),
+                Item.description.ilike(f'%{search_term}%')
+            )
+        )
     
     items = []
     for it in query.all():

@@ -147,12 +147,10 @@ class Category(db.Model):
     
     def get_specifications_schema(self):
         """
-        Get specifications schema as a dictionary for backward compatibility
+        Get specifications schema as a list for the API
         """
-        # Convert specifications to a dictionary
-        result = {}
-        for spec in self.specifications:
-            result[spec.key] = spec.to_dict()
+        # Convert specifications to a list format for API use
+        result = [spec.to_dict() for spec in self.specifications]
         return result
 
 
@@ -193,6 +191,22 @@ class Item(db.Model):
                         'display_order': spec.display_order
                     })
         
+        # Format photos for API compatibility with tests
+        photo_list = []
+        for photo in self.photos:
+            photo_list.append({
+                'id': photo.id,
+                'filename': photo.file_path
+            })
+        
+        # Format URLs for API compatibility with tests
+        url_list = []
+        for url in self.urls:
+            url_list.append({
+                'id': url.id,
+                'url': url.url
+            })
+        
         return {
             'id': self.id,
             'category_id': self.category_id,
@@ -204,8 +218,8 @@ class Item(db.Model):
             'description': self.description,
             'specification_values': spec_values,  # Keep the original dict for backward compatibility
             'ordered_specifications': ordered_specs,  # Add the ordered specifications
-            'photos': [photo.file_path for photo in self.photos],
-            'urls': [url.url for url in self.urls],
+            'photos': photo_list,  # Updated format for tests
+            'urls': url_list,  # Updated format for tests
             'primary_photo': self.photos[0].file_path if self.photos else None
         }
     
@@ -227,6 +241,8 @@ class ItemPhoto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
     file_path = db.Column(db.String, nullable=False)
+    filename = db.Column(db.String)  # Optional column to store original filename
+    is_primary = db.Column(db.Boolean, default=False)  # Flag for primary photo
     
     # Relationship
     item = db.relationship('Item', back_populates='photos')

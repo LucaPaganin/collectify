@@ -53,6 +53,15 @@
                 </div>
             </div>
         </div>
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="searchBox" placeholder="Search items..." aria-label="Search" value="{{ request.args.get('search', '') }}">
+                </div>
+            </div>
+        </div>
     <!-- Gallery View -->
     <div id="itemGrid" class="row g-3 view-container">
       {% for item in items %}
