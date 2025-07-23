@@ -13,7 +13,7 @@ def test_requires_auth_decorator(client, auth_client):
     response = client.get('/admin.html')
     assert response.status_code == 401
     assert 'WWW-Authenticate' in response.headers
-    assert response.headers['WWW-Authenticate'] == 'Basic realm="Authentication Required"'
+    assert response.headers['WWW-Authenticate'] == 'Basic realm="Login Required"'
     
     # Test authorized access
     response = auth_client.get('/admin.html')

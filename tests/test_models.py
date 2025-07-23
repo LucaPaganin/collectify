@@ -162,7 +162,8 @@ def test_item_photos(app, sample_category, sample_photo_file):
         # Create a photo
         photo = ItemPhoto(
             item_id=item.id,
-            filename="test_photo.jpg",
+            file_path="test_photo.jpg",  # Required field
+            filename="test_photo.jpg",   # Optional field
             is_primary=True
         )
         

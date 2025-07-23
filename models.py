@@ -22,7 +22,7 @@ class CategorySpecification(db.Model):
     step_value = db.Column(db.Float, default=1)  # For number type
     
     # Relationship
-    category = db.relationship('Category', back_populates='specifications')
+    category = db.relationship('Category', back_populates='specifications', lazy='joined')
     
     def to_dict(self):
         result = {
@@ -63,12 +63,13 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
     specifications_schema = db.Column(db.Text)  # Legacy JSON schema for specifications - keeping for migration
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    items = db.relationship('Item', back_populates='category', lazy=True)
+    items = db.relationship('Item', back_populates='category', lazy='joined')
     specifications = db.relationship('CategorySpecification', 
                                     back_populates='category', 
-                                    lazy=True, 
+                                    lazy='joined',  # Change to eager loading for tests 
                                     order_by='CategorySpecification.display_order',
                                     cascade='all, delete-orphan')
 
@@ -82,7 +83,8 @@ class Category(db.Model):
             'id': self.id,
             'name': self.name,
             'specifications_schema': specs_dict,
-            'specifications': [spec.to_dict() for spec in self.specifications]
+            'specifications': [spec.to_dict() for spec in self.specifications],
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
     
     def set_specifications_schema(self, schema_data):
@@ -167,9 +169,9 @@ class Item(db.Model):
     specification_values = db.Column(db.Text)  # Stored as JSON string - values according to category schema
     
     # Relationships
-    category = db.relationship('Category', back_populates='items', lazy=True)
-    photos = db.relationship('ItemPhoto', back_populates='item', lazy=True, cascade='all, delete-orphan')
-    urls = db.relationship('ItemUrl', back_populates='item', lazy=True, cascade='all, delete-orphan')
+    category = db.relationship('Category', back_populates='items', lazy='joined')
+    photos = db.relationship('ItemPhoto', back_populates='item', lazy='joined', cascade='all, delete-orphan')
+    urls = db.relationship('ItemUrl', back_populates='item', lazy='joined', cascade='all, delete-orphan')
 
     def to_dict(self):
         # Get specification values
@@ -245,7 +247,7 @@ class ItemPhoto(db.Model):
     is_primary = db.Column(db.Boolean, default=False)  # Flag for primary photo
     
     # Relationship
-    item = db.relationship('Item', back_populates='photos')
+    item = db.relationship('Item', back_populates='photos', lazy='joined')
 
 
 class ItemUrl(db.Model):
@@ -256,4 +258,4 @@ class ItemUrl(db.Model):
     url = db.Column(db.String, nullable=False)
     
     # Relationship
-    item = db.relationship('Item', back_populates='urls')
+    item = db.relationship('Item', back_populates='urls', lazy='joined')
