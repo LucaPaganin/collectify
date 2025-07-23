@@ -30,7 +30,6 @@ def register_item_routes(app):
         return jsonify({'error': 'Item not found'}), 404
 
     @app.route('/api/items', methods=['POST'])
-    @requires_auth
     def add_item():
         """Adds a new item."""
         try:
