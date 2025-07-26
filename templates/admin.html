@@ -1,10 +1,108 @@
 {% extends "base.html" %}
 {% block title %}Admin Panel - Categories{% endblock %}
+{% block head %}
+<style>
+    /* Additional styles for admin panel */
+    .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .admin-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    /* Drag and drop styling */
+    .spec-field {
+        cursor: move;
+        transition: box-shadow 0.3s ease, transform 0.2s ease;
+    }
+    
+    .spec-field.dragging {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        opacity: 0.8;
+        transform: scale(1.02);
+        z-index: 100;
+    }
+    
+    .drag-handle {
+        cursor: grab;
+        font-size: 1.2em;
+        color: #6c757d;
+        padding: 5px;
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">Admin Panel</h1>
         <a href="/" class="btn btn-outline-secondary">Back to Public View</a>
+    </div>
+        <!-- Snackbar for notifications -->
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+            <div id="snackbar" class="toast align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body" id="snackbar-body">Notification</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    
+    <!-- Modal for adding/editing categories -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">Add/Edit Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="modalCategoryForm">
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">Category Name</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                            <input type="hidden" id="categoryId">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveCategoryBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for editing specification schemas -->
+    <div class="modal fade" id="specsModal" tabindex="-1" aria-labelledby="specsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="specsModalLabel">Edit Category Specifications</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Define specifications for <span id="currentCategoryName"></span>. These specifications will be used as a template for all items in this category.</p>
+                    
+                    <div id="specsContainer">
+                        <!-- Specification fields will be generated here -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-3" id="addSpecFieldBtn">+ Add Specification Field</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSpecsBtn">Save Specifications</button>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="row">
         <div class="col-lg-8 mx-auto">
@@ -29,7 +127,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const categoryList = document.getElementById('categoryList');
     const categoryForm = document.getElementById('categoryForm');
     const newCategoryName = document.getElementById('newCategoryName');
+    const specsModal = new bootstrap.Modal(document.getElementById('specsModal'));
+    const specsContainer = document.getElementById('specsContainer');
+    const addSpecFieldBtn = document.getElementById('addSpecFieldBtn');
+    const saveSpecsBtn = document.getElementById('saveSpecsBtn');
+    const currentCategoryName = document.getElementById('currentCategoryName');
+    
     let categories = [];
+    
+    // Snackbar helper
+    function showSnackbar(message) {
+        const snackbarEl = document.getElementById('snackbar');
+        document.getElementById('snackbar-body').textContent = message;
+        const toast = new bootstrap.Toast(snackbarEl);
+        toast.show();
+    }
+    let currentCategoryId = null;
+    let currentSpecs = {};
 
     function fetchCategories() {
         fetch('/api/categories')
@@ -38,6 +152,173 @@ document.addEventListener('DOMContentLoaded', function () {
                 categories = data;
                 renderCategories();
             });
+    }
+    
+    function fetchCategorySpecsSchema(categoryId) {
+        fetch(`/api/categories/${categoryId}/specifications_schema`)
+            .then(res => res.json())
+            .then(schema => {
+                currentSpecs = schema;
+                renderSpecsEditor();
+            })
+            .catch(err => {
+                currentSpecs = {};
+                renderSpecsEditor();
+                console.error('Error fetching specs schema:', err);
+            });
+    }
+    
+    function renderSpecsEditor() {
+        specsContainer.innerHTML = '';
+        
+        // Check if we have new-style array or old-style object
+        if (Array.isArray(currentSpecs)) {
+            // Sort by display_order
+            currentSpecs.sort((a, b) => a.display_order - b.display_order);
+            
+            // Display existing specs in order
+            for (const spec of currentSpecs) {
+                addSpecFieldToEditor(spec.key, spec);
+            }
+        } else {
+            // Legacy format - object with key-value pairs
+            for (const [key, spec] of Object.entries(currentSpecs)) {
+                addSpecFieldToEditor(key, spec);
+            }
+        }
+        
+        // If no specs, show a message
+        if ((Array.isArray(currentSpecs) && currentSpecs.length === 0) || 
+            (!Array.isArray(currentSpecs) && Object.keys(currentSpecs).length === 0)) {
+            specsContainer.innerHTML = '<p class="text-muted">No specifications defined yet. Click the button below to add one.</p>';
+        }
+        
+        // Initialize drag-and-drop for reordering
+        initDragAndDrop();
+    }
+    
+    function initDragAndDrop() {
+        const specFields = document.querySelectorAll('.spec-field');
+        
+        specFields.forEach(field => {
+            field.setAttribute('draggable', 'true');
+            
+            field.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', field.dataset.fieldId);
+                field.classList.add('dragging');
+            });
+            
+            field.addEventListener('dragend', () => {
+                field.classList.remove('dragging');
+            });
+            
+            field.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(specsContainer, e.clientY);
+                const dragging = document.querySelector('.dragging');
+                
+                if (afterElement === null) {
+                    specsContainer.appendChild(dragging);
+                } else {
+                    specsContainer.insertBefore(dragging, afterElement);
+                }
+            });
+        });
+    }
+    
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.spec-field:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+    
+    function addSpecFieldToEditor(key = '', spec = {}) {
+        const fieldId = 'spec_' + Math.random().toString(36).substr(2, 9);
+        const fieldType = spec.type || 'text';
+        
+        const fieldHtml = `
+            <div class="card mb-3 spec-field" data-field-id="${fieldId}" data-display-order="${spec.display_order || 0}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="drag-handle me-2" title="Drag to reorder">
+                                <i class="bi bi-grip-vertical"></i>
+                            </div>
+                            <h6 class="card-title mb-0">Specification Field</h6>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-spec-btn" data-field-id="${fieldId}">Remove</button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Field Key (code name)</label>
+                            <input type="text" class="form-control spec-key" value="${key}" placeholder="e.g., weight, color, material">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Field Label (display name)</label>
+                            <input type="text" class="form-control spec-label" value="${spec.label || ''}" placeholder="e.g., Weight, Color, Material">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Field Type</label>
+                            <select class="form-select spec-type">
+                                <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Text</option>
+                                <option value="number" ${fieldType === 'number' ? 'selected' : ''}>Number</option>
+                                <option value="select" ${fieldType === 'select' ? 'selected' : ''}>Select (dropdown)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Placeholder</label>
+                            <input type="text" class="form-control spec-placeholder" value="${spec.placeholder || ''}" placeholder="e.g., Enter weight in grams...">
+                        </div>
+                        
+                        <!-- Additional options for number type -->
+                        <div class="col-md-4 number-options" ${fieldType !== 'number' ? 'style="display: none;"' : ''}>
+                            <label class="form-label">Min Value</label>
+                            <input type="number" class="form-control spec-min" value="${spec.min || ''}">
+                        </div>
+                        <div class="col-md-4 number-options" ${fieldType !== 'number' ? 'style="display: none;"' : ''}>
+                            <label class="form-label">Max Value</label>
+                            <input type="number" class="form-control spec-max" value="${spec.max || ''}">
+                        </div>
+                        <div class="col-md-4 number-options" ${fieldType !== 'number' ? 'style="display: none;"' : ''}>
+                            <label class="form-label">Step</label>
+                            <input type="number" class="form-control spec-step" value="${spec.step || '1'}" min="0.0001">
+                        </div>
+                        
+                        <!-- Options for select type -->
+                        <div class="col-12 select-options" ${fieldType !== 'select' ? 'style="display: none;"' : ''}>
+                            <label class="form-label">Options (one per line, format: value|label)</label>
+                            <textarea class="form-control spec-options" rows="3">${spec.options ? spec.options.map(o => `${o.value}|${o.label}`).join('\n') : ''}</textarea>
+                            <small class="form-text text-muted">Example: red|Red Color</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add the new field HTML
+        specsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+        
+        // Add event listener to type select to show/hide appropriate options
+        const newField = specsContainer.lastElementChild;
+        const typeSelect = newField.querySelector('.spec-type');
+        
+        typeSelect.addEventListener('change', function() {
+            const fieldType = this.value;
+            const numberOptions = newField.querySelectorAll('.number-options');
+            const selectOptions = newField.querySelectorAll('.select-options');
+            
+            numberOptions.forEach(el => el.style.display = fieldType === 'number' ? 'block' : 'none');
+            selectOptions.forEach(el => el.style.display = fieldType === 'select' ? 'block' : 'none');
+        });
     }
     function renderCategories() {
         if (!categories.length) {
@@ -50,6 +331,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="text" class="form-control form-control-sm category-name-input" value="${cat.name}" data-id="${cat.id}" style="max-width: 250px;" readonly>
                 </div>
                 <button class="btn btn-sm btn-outline-primary me-1 edit-category-btn" data-id="${cat.id}" title="Edit Category">✎</button>
+                <button class="btn btn-sm btn-outline-secondary me-1 edit-specs-btn" data-id="${cat.id}" data-name="${cat.name}" title="Edit Specifications Schema">📋</button>
                 <button class="btn btn-sm btn-outline-danger" data-id="${cat.id}" title="Delete Category">&times;</button>
             </li>
         `).join('');
@@ -75,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderCategories();
             newCategoryName.value = '';
         })
-        .catch(err => alert(err.message));
+    .catch(err => showSnackbar(err.message));
     });
     categoryList.addEventListener('click', function (e) {
         // Delete
@@ -93,7 +375,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     categories = categories.filter(c => c.id != id);
                     renderCategories();
                 })
-                .catch(err => alert(err.message));
+                .catch(err => showSnackbar(err.message));
+        }
+        
+        // Edit Specifications
+        if (e.target.classList.contains('edit-specs-btn') && e.target.dataset.id) {
+            const id = e.target.dataset.id;
+            const name = e.target.dataset.name;
+            currentCategoryId = id;
+            currentCategoryName.textContent = name;
+            
+            // Fetch the specification schema for this category
+            fetchCategorySpecsSchema(id);
+            
+            // Show the modal
+            specsModal.show();
         }
         // Edit
         if (e.target.classList.contains('edit-category-btn') && e.target.dataset.id) {
@@ -123,10 +419,97 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (cat) cat.name = updated.name;
                     renderCategories();
                 })
-                .catch(err => alert(err.message));
+                .catch(err => showSnackbar(err.message));
             }
         }
     });
+    // Add a new specification field
+    addSpecFieldBtn.addEventListener('click', function() {
+        addSpecFieldToEditor();
+    });
+    
+    // Remove a specification field
+    specsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-spec-btn')) {
+            const fieldId = e.target.dataset.fieldId;
+            const field = document.querySelector(`.spec-field[data-field-id="${fieldId}"]`);
+            if (field) {
+                field.remove();
+            }
+        }
+    });
+    
+    // Save specifications schema
+    saveSpecsBtn.addEventListener('click', function() {
+        const schema = [];
+        const fields = document.querySelectorAll('.spec-field');
+        
+        fields.forEach((field, index) => {
+            const key = field.querySelector('.spec-key').value.trim();
+            
+            if (key) {
+                const fieldType = field.querySelector('.spec-type').value;
+                const spec = {
+                    key: key,
+                    type: fieldType,
+                    label: field.querySelector('.spec-label').value.trim(),
+                    placeholder: field.querySelector('.spec-placeholder').value.trim(),
+                    display_order: index // Use the current order in the DOM
+                };
+                
+                // Add specific properties based on field type
+                if (fieldType === 'number') {
+                    const min = field.querySelector('.spec-min').value;
+                    const max = field.querySelector('.spec-max').value;
+                    const step = field.querySelector('.spec-step').value;
+                    
+                    if (min) spec.min = parseFloat(min);
+                    if (max) spec.max = parseFloat(max);
+                    if (step) spec.step = parseFloat(step);
+                }
+                else if (fieldType === 'select') {
+                    const optionsText = field.querySelector('.spec-options').value.trim();
+                    
+                    if (optionsText) {
+                        const options = [];
+                        
+                        optionsText.split('\n').forEach(line => {
+                            if (line.trim()) {
+                                const parts = line.split('|');
+                                const value = parts[0].trim();
+                                const label = parts.length > 1 ? parts[1].trim() : value;
+                                
+                                options.push({ value, label });
+                            }
+                        });
+                        
+                        spec.options = options;
+                    }
+                }
+                
+                schema.push(spec);
+            }
+        });
+        
+        // Save the schema to the server
+        fetch(`/api/categories/${currentCategoryId}/specifications_schema`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(schema)
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Failed to update specifications schema.') });
+            }
+            return res.json();
+        })
+        .then(() => {
+            showSnackbar('Specifications schema saved successfully!');
+            specsModal.hide();
+        })
+    .catch(err => showSnackbar(err.message));
+    });
+    
     fetchCategories();
 });
 </script>
