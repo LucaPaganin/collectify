@@ -8,18 +8,23 @@ A Flask application for managing collections of items with customizable specific
 - Docker and Docker Compose installed on your system
 
 ### Running with Docker Compose
-1. Build and start the containers:
+* Pull the image from github
+  ```bash
+  docker pull lucaplawliet/collectify-web
+  ```
+
+* Build and start the containers:
    ```bash
    docker-compose up -d
    ```
 
-2. Access the application:
+* Access the application:
    - Main page: http://localhost:5000
    - Admin panel: http://localhost:5000/admin.html
      - Username: admin
      - Password: password
 
-3. Stop the containers:
+* Stop the containers:
    ```bash
    docker-compose down
    ```
