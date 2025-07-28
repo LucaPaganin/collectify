@@ -1,16 +1,18 @@
 import React from 'react';
-import { Modal as BSModal } from 'react-bootstrap';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from './Button';
 
 const Modal = ({ show, title, children, onClose }) => (
-  <BSModal show={show} onHide={onClose} centered>
-    <BSModal.Header closeButton>
-      <BSModal.Title>{title}</BSModal.Title>
-    </BSModal.Header>
-    <BSModal.Body>{children}</BSModal.Body>
-    <BSModal.Footer>
-      <button className="btn btn-secondary" onClick={onClose}>Close</button>
-    </BSModal.Footer>
-  </BSModal>
+  <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
+    <DialogTitle>{title}</DialogTitle>
+    <DialogContent dividers>{children}</DialogContent>
+    <DialogActions>
+      <Button onClick={onClose} color="secondary">Close</Button>
+    </DialogActions>
+  </Dialog>
 );
 
 export default Modal;

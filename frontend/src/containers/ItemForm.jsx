@@ -95,6 +95,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
             name="category_id"
             value={form.category_id}
             onChange={handleChange}
+            required
           >
             <option value="">Select category</option>
             {categories.map(c => (
@@ -103,39 +104,13 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
           </select>
         </div>
         <div className="mb-2">
-          <label className="form-label">Name</label>
           <Input
             name="name"
             value={form.name}
             onChange={handleChange}
+            label="Name"
             placeholder="Item name"
-          />
-        </div>
-        <div className="mb-2">
-          <label className="form-label">Brand</label>
-          <Input
-            name="brand"
-            value={form.brand}
-            onChange={handleChange}
-            placeholder="Brand"
-          />
-        </div>
-        <div className="mb-2">
-          <label className="form-label">Serial #</label>
-          <Input
-            name="serial"
-            value={form.serial}
-            onChange={handleChange}
-            placeholder="Serial number"
-          />
-        </div>
-        <div className="mb-2">
-          <label className="form-label">Extra info / Notes</label>
-          <Input
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            placeholder="Description"
+            required
           />
         </div>
         {specFields.map(field => (

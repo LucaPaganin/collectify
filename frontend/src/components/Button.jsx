@@ -1,9 +1,10 @@
 import React from 'react';
+import { Button as MuiButton } from '@mui/material';
 
-const Button = ({ children, onClick, variant = 'primary', ...props }) => (
-  <button className={`btn btn-${variant}`} onClick={onClick} {...props}>
+const Button = ({ children, variant = 'contained', color = 'primary', ...props }) => (
+  <MuiButton variant={variant} color={color} {...props}>
     {children}
-  </button>
+  </MuiButton>
 );
 
 export default Button;

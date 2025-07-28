@@ -1,12 +1,14 @@
 import React from 'react';
+import TextField from '@mui/material/TextField';
 
-const Input = ({ value, onChange, placeholder, type = 'text', ...props }) => (
-  <input
+const Input = ({ value, onChange, placeholder, type = 'text', label, ...props }) => (
+  <TextField
     type={type}
-    className="form-control"
     value={value}
     onChange={onChange}
-    placeholder={placeholder}
+    label={label || placeholder}
+    variant="outlined"
+    fullWidth
     {...props}
   />
 );
