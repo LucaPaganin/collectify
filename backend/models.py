@@ -162,10 +162,6 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     name = db.Column(db.String, nullable=False)
-    brand = db.Column(db.String, nullable=False)
-    serial_number = db.Column(db.String)
-    form_factor = db.Column(db.String)
-    description = db.Column(db.Text)
     specification_values = db.Column(db.Text)  # Stored as JSON string - values according to category schema
     
     # Relationships
@@ -176,14 +172,11 @@ class Item(db.Model):
     def to_dict(self):
         # Get specification values
         spec_values = json.loads(self.specification_values) if self.specification_values else {}
-        
+
         # Get category specifications ordered by display_order
         ordered_specs = []
         if self.category:
-            # Get all specifications from the category in proper order
             category_specs = self.category.specifications
-            
-            # Create ordered specifications with values
             for spec in category_specs:
                 if spec.key in spec_values:
                     ordered_specs.append({
@@ -192,7 +185,7 @@ class Item(db.Model):
                         'value': spec_values.get(spec.key, ''),
                         'display_order': spec.display_order
                     })
-        
+
         # Format photos for API compatibility with tests
         photo_list = []
         for photo in self.photos:
@@ -200,7 +193,7 @@ class Item(db.Model):
                 'id': photo.id,
                 'filename': photo.file_path
             })
-        
+
         # Format URLs for API compatibility with tests
         url_list = []
         for url in self.urls:
@@ -208,20 +201,24 @@ class Item(db.Model):
                 'id': url.id,
                 'url': url.url
             })
-        
+
+        # Extract legacy fields from specs if present
+        brand = spec_values.get('brand', '')
+        serial_number = spec_values.get('serial_number', '')
+        description = spec_values.get('description', '')
+
         return {
             'id': self.id,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'name': self.name,
-            'brand': self.brand,
-            'serial_number': self.serial_number,
-            'form_factor': self.form_factor,
-            'description': self.description,
-            'specification_values': spec_values,  # Keep the original dict for backward compatibility
-            'ordered_specifications': ordered_specs,  # Add the ordered specifications
-            'photos': photo_list,  # Updated format for tests
-            'urls': url_list,  # Updated format for tests
+            'brand': brand,
+            'serial_number': serial_number,
+            'description': description,
+            'specification_values': spec_values,
+            'ordered_specifications': ordered_specs,
+            'photos': photo_list,
+            'urls': url_list,
             'primary_photo': self.photos[0].file_path if self.photos else None
         }
     
