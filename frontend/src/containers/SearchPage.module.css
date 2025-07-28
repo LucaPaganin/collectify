@@ -1,0 +1,76 @@
+.searchPageBg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2eafc 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 60px;
+}
+.searchCard {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 32px 40px 24px 40px;
+  max-width: 480px;
+  width: 100%;
+  margin-bottom: 32px;
+}
+.searchTitle {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  text-align: center;
+  color: #2d3748;
+}
+.searchForm {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 0;
+}
+.searchInput {
+  flex: 2;
+  min-width: 0;
+}
+.searchSelect {
+  flex: 1;
+  min-width: 180px;
+}
+.searchBtn {
+  flex: 0;
+  border-radius: 8px !important;
+  background: #0074ff !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: background 0.2s;
+}
+.searchBtn:hover, .searchBtn:focus {
+  background: #005be6 !important;
+  color: #fff !important;
+}
+.resultsSection {
+  max-width: 480px;
+  width: 100%;
+}
+.newItemBtn {
+  width: 100%;
+  margin-top: 24px;
+  border-radius: 8px !important;
+  background: #0074ff !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: background 0.2s;
+}
+.newItemBtn:hover, .newItemBtn:focus {
+  background: #005be6 !important;
+  color: #fff !important;
+}
+.noResults {
+  text-align: center;
+  color: #888;
+  margin-top: 24px;
+}

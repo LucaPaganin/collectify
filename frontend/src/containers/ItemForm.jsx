@@ -36,6 +36,24 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     }
   }, [initialData]);
 
+  // Reset form on each open (show true)
+  useEffect(() => {
+    if (show) {
+      if (initialData) {
+        setForm({
+          name: initialData.name || '',
+          brand: initialData.brand || '',
+          serial: initialData.serial || '',
+          description: initialData.description || '',
+          category_id: initialData.category_id || '',
+          specs: initialData.specs || {},
+        });
+      } else {
+        setForm({ name: '', brand: '', serial: '', description: '', category_id: '', specs: {} });
+      }
+    }
+  }, [show, initialData]);
+
   useEffect(() => {
     if (form.category_id) {
       axios
@@ -71,6 +89,20 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="mb-2">
+          <label className="form-label">Category</label>
+          <select
+            className="form-select"
+            name="category_id"
+            value={form.category_id}
+            onChange={handleChange}
+          >
+            <option value="">Select category</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-2">
           <label className="form-label">Name</label>
           <Input
             name="name"
@@ -105,20 +137,6 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
             onChange={handleChange}
             placeholder="Description"
           />
-        </div>
-        <div className="mb-2">
-          <label className="form-label">Category</label>
-          <select
-            className="form-select"
-            name="category_id"
-            value={form.category_id}
-            onChange={handleChange}
-          >
-            <option value="">Select category</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
         </div>
         {specFields.map(field => (
           <div className="mb-2" key={field.name}>
