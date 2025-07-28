@@ -25,7 +25,9 @@
                 // "--no-debugger",
                 // "--no-reload"
             ],
-            "jinja": true
+            "jinja": true,
+            "cwd": "${workspaceFolder}/backend",
+            "justMyCode": false,
         },
         {
             "name": "Chrome",
