@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import ItemForm from './ItemForm';
 
 const SearchPage = () => {
   const [query, setQuery] = useState('');
@@ -9,11 +10,17 @@ const SearchPage = () => {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formData, setFormData] = useState(null);
 
   const search = async () => {
     const res = await axios.get(`/api/items?search=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`);
     setResults(res.data);
   };
+
+  const openNew = () => { setFormData(null); setFormOpen(true); };
+  const openEdit = item => { setFormData(item); setFormOpen(true); };
+  const handleSave = () => { setFormOpen(false); search(); };
 
   return (
     <div className="container mt-4">
@@ -43,20 +50,25 @@ const SearchPage = () => {
                 className="list-group-item d-flex justify-content-between align-items-center"
               >
                 <span>{item.name}</span>
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    setSelectedItem(item);
-                    setModalOpen(true);
-                  }}
-                >
-                  View
-                </Button>
+                <div>
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setModalOpen(true);
+                    }}
+                  >
+                    View
+                  </Button>
+                  <Button variant="link" onClick={() => openEdit(item)}>Edit</Button>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <Button onClick={openNew} variant="success">New Item</Button>
 
       {selectedItem && (
         <Modal
@@ -70,6 +82,13 @@ const SearchPage = () => {
           {/* TODO: images, specs */}
         </Modal>
       )}
+
+      <ItemForm
+        show={formOpen}
+        initialData={formData}
+        onClose={() => setFormOpen(false)}
+        onSave={handleSave}
+      />
     </div>
   );
 };
