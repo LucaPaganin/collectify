@@ -1,0 +1,73 @@
+.adminHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.card {
+  margin-bottom: 24px;
+}
+
+.cardBody {
+  padding: 24px;
+}
+
+.categoryForm {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.formInput {
+  flex: 1;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.dragHandle {
+  cursor: grab;
+  margin-right: 8px;
+  color: #6c757d;
+}
+
+.specField {
+  margin-bottom: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.specField.dragging {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  opacity: 0.8;
+  transform: scale(1.02);
+  z-index: 100;
+}
+
+.specFieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.snackbar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
