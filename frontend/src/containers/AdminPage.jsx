@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import styles from './AdminPage.module.css';
+import { useAuth } from '../context/AuthContext';
 
 // Material UI imports
 import { 
@@ -29,7 +30,8 @@ import {
   Snackbar,
   TextField,
   Typography,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 
 import {
@@ -38,12 +40,14 @@ import {
   Delete as DeleteIcon,
   DragIndicator as DragIndicatorIcon,
   Edit as EditIcon,
+  Logout as LogoutIcon,
   Save as SaveIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
 
 const AdminPage = () => {
   const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
@@ -56,6 +60,7 @@ const AdminPage = () => {
   const [editModalData, setEditModalData] = useState({ id: null, name: '' });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteModalId, setDeleteModalId] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
@@ -67,11 +72,14 @@ const AdminPage = () => {
 
   // Fetch categories from API
   const fetchCategories = async () => {
+    setLoading(true);
     try {
       const response = await axios.get('/api/categories');
       setCategories(response.data);
     } catch (error) {
       showSnackbar('Error fetching categories: ' + (error.response?.data?.error || error.message), 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,9 +195,12 @@ const AdminPage = () => {
       label: '',
       type: 'text',
       placeholder: '',
-      display_order: specifications.length
+      display_order: 0 // Add new fields at the top
     };
-    setSpecifications([...specifications, newSpec]);
+    setSpecifications([newSpec, ...specifications.map(spec => ({
+      ...spec,
+      display_order: (spec.display_order || 0) + 1
+    }))]);
   };
 
   // Update a specification field
@@ -256,6 +267,12 @@ const AdminPage = () => {
     }
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   // Show snackbar message
   const showSnackbar = (message, severity = 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -266,22 +283,45 @@ const AdminPage = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <>
       <Navbar />
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box className={styles.adminHeader}>
-          <Typography variant="h4" component="h1" fontWeight="500">
-            Admin Panel
-          </Typography>
-          <Button 
-            variant="outlined" 
-            color="inherit" 
-            onClick={() => navigate('/')}
-            startIcon={<CloseIcon />}
-          >
-            Back to Gallery
-          </Button>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight="500">
+              Admin Panel
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Logged in as {currentUser?.username}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              color="inherit" 
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+            >
+              Logout
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="inherit" 
+              onClick={() => navigate('/')}
+              startIcon={<CloseIcon />}
+            >
+              Back to Gallery
+            </Button>
+          </Box>
         </Box>
 
         <Card className={styles.card} elevation={2}>

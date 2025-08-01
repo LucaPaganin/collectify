@@ -1,10 +1,11 @@
 """Main entry point for the Collectify application."""
 from config import create_app
-from models import db
+from models import db, User
 from utils.database import ensure_db_initialized
 from routes.frontend import register_frontend_routes
 from routes.categories import register_category_routes
 from routes.items import register_item_routes
+from routes.auth import auth_bp
 from flask_cli import register_commands
 
 # Create the Flask application
@@ -17,6 +18,7 @@ db.init_app(app)
 register_frontend_routes(app)
 register_category_routes(app)
 register_item_routes(app)
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
 # Using Flask's event system instead of before_first_request (which is removed in Flask 3.x)
 # This will run when the first request is received
@@ -26,6 +28,18 @@ def initialize_database():
         # Ensure the database is initialized
         print("[DB] Ensuring database is initialized...")
         ensure_db_initialized(app)
+        
+        # Create default admin user if no users exist
+        if User.query.count() == 0:
+            print("[DB] Creating default admin user...")
+            admin = User(
+                username="admin",
+                email="admin@example.com",
+                is_admin=True
+            )
+            admin.set_password("password")
+            db.session.add(admin)
+            db.session.commit()
     
 # Register CLI commands
 register_commands(app)

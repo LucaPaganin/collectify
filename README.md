@@ -72,7 +72,8 @@ Collectify is a web application designed to help you organize, manage, and view 
 - Rich web interface with search and filter functionality.
 - Responsive design for desktop and mobile.
 - Data export and import options (e.g., CSV, JSON).
-- User authentication (optional, if enabled).
+- User authentication with JWT tokens for API security.
+- Role-based access control (admin vs regular users).
 - Customizable categories, tags, and properties.
 
 ---
@@ -138,6 +139,21 @@ docker stop collectify
 docker rm collectify
 ```
 
+### 5. Authentication
+
+The application includes a secure authentication system:
+
+- Default admin credentials:
+  - Username: `admin`
+  - Password: `password`
+
+- To set up authentication:
+  ```bash
+  flask migrate-users
+  ```
+
+- See [AUTH_README.md](AUTH_README.md) for more details about the authentication system.
+
 ---
 
 ## Configuration
@@ -148,6 +164,10 @@ docker rm collectify
     cp .env.example .env
     ```
   - Edit `.env` with your favorite editor.
+  - Key environment variables:
+    - `SECRET_KEY`: Used for JWT token encryption (auto-generated if not set)
+    - `ADMIN_PASSWORD`: Custom password for admin user (default: "password")
+    - `FLASK_ENV`: Set to "development" or "production"
 
 ---
 

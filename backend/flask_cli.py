@@ -4,6 +4,7 @@ import socket
 import ipaddress
 from flask.cli import with_appcontext
 from utils.database import init_db, ensure_db_initialized
+from migrate_users import migrate_users
 
 def register_commands(app):
     """Register custom Flask CLI commands."""
@@ -29,6 +30,14 @@ def register_commands(app):
             click.echo("Database was initialized.")
         else:
             click.echo("Database already exists and is initialized.")
+    
+    @app.cli.command("migrate-users")
+    @with_appcontext
+    def migrate_users_command():
+        """Create or update the users table."""
+        click.echo("Starting user migration...")
+        migrate_users()
+        click.echo("User migration complete!")
     
     @app.cli.command("network-info")
     def network_info_command():

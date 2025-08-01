@@ -1,5 +1,6 @@
 """Configuration module for the Flask application."""
 import os
+import secrets
 from flask import Flask
 
 def create_app():
@@ -18,6 +19,9 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.path.join(data_dir, 'uploads')
     app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+    
+    # Add a secret key for JWT
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     
     # Ensure uploads directory exists
     uploads_dir = os.path.join(data_dir, 'uploads')
