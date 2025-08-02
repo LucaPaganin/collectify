@@ -11,8 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app import app as flask_app
-from models import db, Category, Item, ItemUrl, ItemPhoto, CategorySpecification
+from models import db, Category, Item, ItemUrl, ItemPhoto, CategorySpecification, User
 from config import create_app
+from utils.auth import generate_token
 
 @pytest.fixture
 def app():
@@ -64,6 +65,54 @@ def app():
 def client(app):
     """Flask test client"""
     return app.test_client()
+
+@pytest.fixture
+def token_auth_client(app, client):
+    """Authenticated test client with JWT token"""
+    with app.app_context():
+        # Create a test admin user
+        admin = User(
+            username="testadmin",
+            email="testadmin@example.com",
+            is_admin=True
+        )
+        admin.set_password("password")
+        db.session.add(admin)
+        db.session.commit()
+        
+        # Generate a token for this user
+        token = generate_token(admin)
+        
+        # Create token auth header
+        auth_headers = {'Authorization': f'Bearer {token}'}
+        
+        # Return a client that will include these headers in all requests
+        class TokenAuthClient:
+            def get(self, *args, **kwargs):
+                headers = kwargs.get('headers', {})
+                headers.update(auth_headers)
+                kwargs['headers'] = headers
+                return client.get(*args, **kwargs)
+                
+            def post(self, *args, **kwargs):
+                headers = kwargs.get('headers', {})
+                headers.update(auth_headers)
+                kwargs['headers'] = headers
+                return client.post(*args, **kwargs)
+                
+            def put(self, *args, **kwargs):
+                headers = kwargs.get('headers', {})
+                headers.update(auth_headers)
+                kwargs['headers'] = headers
+                return client.put(*args, **kwargs)
+                
+            def delete(self, *args, **kwargs):
+                headers = kwargs.get('headers', {})
+                headers.update(auth_headers)
+                kwargs['headers'] = headers
+                return client.delete(*args, **kwargs)
+        
+        return TokenAuthClient()
 
 @pytest.fixture
 def auth_client(client):

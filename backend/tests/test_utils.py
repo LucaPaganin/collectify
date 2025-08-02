@@ -3,10 +3,10 @@ test_utils.py - Tests for utility functions
 """
 import pytest
 from flask import request
-from utils.auth import requires_auth, check_auth
+from utils.auth import requires_auth, check_auth, token_required
 from utils.helpers import prepare_items_for_template
 
-def test_requires_auth_decorator(client, auth_client):
+def test_requires_auth_decorator(client, token_auth_client):
     """Test the requires_auth decorator"""
     
     # Test unauthorized access (no auth header)
@@ -16,8 +16,21 @@ def test_requires_auth_decorator(client, auth_client):
     assert response.headers['WWW-Authenticate'] == 'Basic realm="Login Required"'
     
     # Test authorized access
-    response = auth_client.get('/admin.html')
+    response = token_auth_client.get('/admin.html')
     assert response.status_code == 200
+    
+def test_token_required_decorator(client, token_auth_client):
+    """Test the token_required decorator"""
+    
+    # Test unauthorized access (no token)
+    response = client.post('/api/categories', 
+                          data={"name": "Test Category"})
+    assert response.status_code == 401
+    
+    # Test authorized access with token
+    response = token_auth_client.post('/api/categories', 
+                                    data={"name": "Test Category with Token"})
+    assert response.status_code == 201
 
 def test_check_auth_function():
     """Test the check_auth function directly"""

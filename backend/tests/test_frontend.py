@@ -90,9 +90,9 @@ def test_admin_route_unauthenticated(client):
     response = client.get('/admin.html')
     assert response.status_code == 401
 
-def test_admin_route_authenticated(auth_client):
+def test_admin_route_authenticated(token_auth_client):
     """Test accessing admin route with authentication"""
-    response = auth_client.get('/admin.html')
+    response = token_auth_client.get('/admin.html')
     assert response.status_code == 200
     
     # Parse the HTML content

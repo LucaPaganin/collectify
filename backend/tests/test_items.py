@@ -76,7 +76,7 @@ def test_create_item_unauthenticated(client, sample_category):
     # Should return 401 Unauthorized
     assert response.status_code == 401
 
-def test_create_item_authenticated(auth_client, sample_category_with_specs):
+def test_create_item_authenticated(token_auth_client, sample_category_with_specs):
     """Test creating an item with authentication"""
     category_id = sample_category_with_specs.id
     
@@ -96,7 +96,7 @@ def test_create_item_authenticated(auth_client, sample_category_with_specs):
         ])
     }
     
-    response = auth_client.post('/api/items', data=data)
+    response = token_auth_client.post('/api/items', data=data)
     assert response.status_code == 201
     
     created_item = json.loads(response.data)
@@ -114,7 +114,30 @@ def test_create_item_authenticated(auth_client, sample_category_with_specs):
     assert len(created_item['urls']) == 1
     assert created_item['urls'][0]['url'] == 'https://example.com/new-item'
 
-def test_create_item_with_photo(auth_client, sample_category, app):
+def test_create_item_with_only_required_fields(token_auth_client, sample_category_with_specs):
+    """Test creating an item with only required fields (name and category_id)"""
+    category_id = sample_category_with_specs.id
+    
+    # Create a test item with only required fields
+    data = {
+        'name': 'Minimal Test Item',
+        'category_id': category_id
+    }
+    
+    response = token_auth_client.post('/api/items', data=data)
+    assert response.status_code == 201
+    
+    created_item = json.loads(response.data)
+    assert created_item['name'] == 'Minimal Test Item'
+    assert created_item['category_id'] == category_id
+    
+    # Other fields should be empty or have default values
+    assert created_item['brand'] == ''
+    assert created_item['description'] == ''
+    assert 'specification_values' in created_item
+    assert len(created_item['specification_values']) == 0
+
+def test_create_item_with_photo(token_auth_client, sample_category, app):
     """Test creating an item with a photo"""
     category_id = sample_category.id
     
@@ -129,7 +152,7 @@ def test_create_item_with_photo(auth_client, sample_category, app):
         'photos[]': (test_image, 'test_image.jpg')
     }
     
-    response = auth_client.post('/api/items', 
+    response = token_auth_client.post('/api/items', 
                               data=data,
                               content_type='multipart/form-data')
     
@@ -146,7 +169,7 @@ def test_create_item_with_photo(auth_client, sample_category, app):
     photo_path = os.path.join(app.config['UPLOAD_FOLDER'], created_item['photos'][0]['filename'])
     assert os.path.exists(photo_path)
 
-def test_update_item(auth_client, sample_item):
+def test_update_item(token_auth_client, sample_item):
     """Test updating an item"""
     item_id = sample_item.id
     
@@ -157,7 +180,7 @@ def test_update_item(auth_client, sample_item):
         'description': 'Updated description'
     }
     
-    response = auth_client.put(f'/api/items/{item_id}', 
+    response = token_auth_client.put(f'/api/items/{item_id}', 
                              data=data)
     
     assert response.status_code == 200
@@ -168,7 +191,7 @@ def test_update_item(auth_client, sample_item):
     assert updated_item['brand'] == 'Updated Brand'
     assert updated_item['description'] == 'Updated description'
 
-def test_update_item_specifications(auth_client, sample_item):
+def test_update_item_specifications(token_auth_client, sample_item):
     """Test updating an item's specification values"""
     item_id = sample_item.id
     
@@ -180,50 +203,50 @@ def test_update_item_specifications(auth_client, sample_item):
         })
     }
     
-    response = auth_client.put(f'/api/items/{item_id}', data=data)
+    response = token_auth_client.put(f'/api/items/{item_id}', data=data)
     assert response.status_code == 200
     
     updated_item = json.loads(response.data)
     assert updated_item['specification_values']['weight'] == '20.5'
     assert updated_item['specification_values']['color'] == 'Yellow'
 
-def test_update_nonexistent_item(auth_client):
+def test_update_nonexistent_item(token_auth_client):
     """Test updating an item that doesn't exist"""
     data = {'name': 'This Should Fail'}
     
-    response = auth_client.put('/api/items/9999', data=data)
+    response = token_auth_client.put('/api/items/9999', data=data)
     assert response.status_code == 404
 
-def test_delete_item(auth_client, sample_item):
+def test_delete_item(token_auth_client, sample_item):
     """Test deleting an item"""
     item_id = sample_item.id
     
-    response = auth_client.delete(f'/api/items/{item_id}')
+    response = token_auth_client.delete(f'/api/items/{item_id}')
     assert response.status_code == 200
     
     # Verify it was actually deleted
-    response = auth_client.get(f'/api/items/{item_id}')
+    response = token_auth_client.get(f'/api/items/{item_id}')
     assert response.status_code == 404
 
-def test_delete_nonexistent_item(auth_client):
+def test_delete_nonexistent_item(token_auth_client):
     """Test deleting an item that doesn't exist"""
-    response = auth_client.delete('/api/items/9999')
+    response = token_auth_client.delete('/api/items/9999')
     assert response.status_code == 404
 
-def test_add_item_url(auth_client, sample_item):
+def test_add_item_url(token_auth_client, sample_item):
     """Test adding a URL to an item"""
     item_id = sample_item.id
     
     data = {'url': 'https://example.com/added-url'}
     
-    response = auth_client.post(f'/api/items/{item_id}/urls', 
+    response = token_auth_client.post(f'/api/items/{item_id}/urls', 
                               data=json.dumps(data),
                               content_type='application/json')
     
     assert response.status_code == 201
     
     # Verify URL was added
-    response = auth_client.get(f'/api/items/{item_id}')
+    response = token_auth_client.get(f'/api/items/{item_id}')
     item = json.loads(response.data)
     
     # Find the newly added URL
@@ -235,28 +258,28 @@ def test_add_item_url(auth_client, sample_item):
     
     assert found is True
 
-def test_delete_item_url(auth_client, sample_item):
+def test_delete_item_url(token_auth_client, sample_item):
     """Test deleting a URL from an item"""
     item_id = sample_item.id
     
     # Get the first URL's ID
-    response = auth_client.get(f'/api/items/{item_id}')
+    response = token_auth_client.get(f'/api/items/{item_id}')
     item = json.loads(response.data)
     url_id = item['urls'][0]['id']
     
     # Delete the URL
-    response = auth_client.delete(f'/api/items/{item_id}/urls/{url_id}')
+    response = token_auth_client.delete(f'/api/items/{item_id}/urls/{url_id}')
     assert response.status_code == 200
     
     # Verify URL was deleted
-    response = auth_client.get(f'/api/items/{item_id}')
+    response = token_auth_client.get(f'/api/items/{item_id}')
     updated_item = json.loads(response.data)
     
     # Make sure the URL is no longer in the list
     for url in updated_item['urls']:
         assert url['id'] != url_id
 
-def test_add_item_photo(auth_client, sample_item, app):
+def test_add_item_photo(token_auth_client, sample_item, app):
     """Test adding a photo to an item"""
     item_id = sample_item.id
     
@@ -265,14 +288,14 @@ def test_add_item_photo(auth_client, sample_item, app):
     
     data = {'photos[]': (test_image, 'new_photo.jpg')}
     
-    response = auth_client.post(f'/api/items/{item_id}/photos', 
+    response = token_auth_client.post(f'/api/items/{item_id}/photos', 
                               data=data,
                               content_type='multipart/form-data')
     
     assert response.status_code == 201
     
     # Verify photo was added
-    response = auth_client.get(f'/api/items/{item_id}')
+    response = token_auth_client.get(f'/api/items/{item_id}')
     item = json.loads(response.data)
     
     # Find the new photo
