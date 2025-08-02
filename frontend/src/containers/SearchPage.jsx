@@ -69,7 +69,7 @@ const SearchPage = () => {
                 ))}
               </ul>
             )}
-            <Button onClick={openNew} variant="success" className={styles.newItemBtn}>New Item</Button>
+            {/* <Button onClick={openNew} variant="success" className={styles.newItemBtn}>New Item</Button> */}
           </div>
         )}
 

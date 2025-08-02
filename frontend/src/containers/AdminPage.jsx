@@ -87,17 +87,32 @@ const AdminPage = () => {
   const fetchSpecificationsSchema = async (categoryId) => {
     try {
       const response = await axios.get(`/api/categories/${categoryId}/specifications_schema`);
-      // Sort by display_order if available
-      const specs = Array.isArray(response.data) 
-        ? response.data.sort((a, b) => a.display_order - b.display_order)
-        : Object.entries(response.data).map(([key, spec], index) => ({
-            key,
-            ...spec,
-            display_order: index
-          }));
+      
+      // Process the response data based on its structure
+      let specs;
+      if (Array.isArray(response.data)) {
+        // It's already an array, just sort it
+        specs = response.data.sort((a, b) => 
+          (a.display_order || 0) - (b.display_order || 0)
+        );
+      } else if (typeof response.data === 'object') {
+        // It's an object, convert to array
+        specs = Object.entries(response.data).map(([key, spec], index) => ({
+          key,
+          ...spec,
+          display_order: spec.display_order || index
+        }));
+        // Sort by display_order
+        specs.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+      } else {
+        // Unexpected format
+        specs = [];
+        console.error('Unexpected format for specifications schema:', response.data);
+      }
       
       setSpecifications(specs);
     } catch (error) {
+      console.error('Error fetching specifications:', error);
       setSpecifications([]);
       showSnackbar('Error fetching specifications: ' + (error.response?.data?.error || error.message), 'error');
     }
@@ -259,10 +274,34 @@ const AdminPage = () => {
     }
 
     try {
-      await axios.put(`/api/categories/${currentCategoryId}/specifications_schema`, specifications);
+      // Make sure all spec objects have the required properties and correct format
+      const formattedSpecs = specifications.map((spec, index) => ({
+        key: spec.key,
+        label: spec.label || spec.key,
+        type: spec.type || 'text',
+        placeholder: spec.placeholder || '',
+        display_order: spec.display_order !== undefined ? spec.display_order : index,
+        ...(spec.type === 'number' ? {
+          min: spec.min !== undefined ? Number(spec.min) : undefined,
+          max: spec.max !== undefined ? Number(spec.max) : undefined,
+          step: spec.step !== undefined ? Number(spec.step) : 1
+        } : {}),
+        ...(spec.type === 'select' ? {
+          options: Array.isArray(spec.options) ? spec.options : []
+        } : {})
+      }));
+
+      // Send properly formatted specifications
+      await axios.put(
+        `/api/categories/${currentCategoryId}/specifications_schema`, 
+        formattedSpecs,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      
       showSnackbar('Specifications saved successfully', 'success');
       setOpenSpecsModal(false);
     } catch (error) {
+      console.error('Error saving specifications:', error);
       showSnackbar('Error saving specifications: ' + (error.response?.data?.error || error.message), 'error');
     }
   };
