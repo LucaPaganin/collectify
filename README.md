@@ -75,6 +75,7 @@ Collectify is a web application designed to help you organize, manage, and view 
 - User authentication with JWT tokens for API security.
 - Role-based access control (admin vs regular users).
 - Customizable categories, tags, and properties.
+- Comprehensive error logging with automatic log rotation.
 
 ---
 
@@ -168,6 +169,25 @@ The application includes a secure authentication system:
     - `SECRET_KEY`: Used for JWT token encryption (auto-generated if not set)
     - `ADMIN_PASSWORD`: Custom password for admin user (default: "password")
     - `FLASK_ENV`: Set to "development" or "production"
+
+## Logging
+
+Collectify includes a comprehensive logging system that captures errors, warnings, and informational events. This helps with troubleshooting and monitoring application behavior.
+
+- **Log Location:** Logs are stored in `backend/logs/collectify.log`
+- **Log Rotation:** Automatic rotation at 10MB with 10 backup files
+- **Log Format:** `YYYY-MM-DD HH:MM:SS,sss LEVEL: Message [in file_path:line_number]`
+
+Key logging features:
+- Authentication and authorization events
+- Database operations
+- User management actions
+- Item and category operations
+- Application startup and configuration events
+- Centralized exception handling with `@log_exceptions` decorator
+- Automatic database transaction rollback on errors
+
+For more details, see [LOGGING.md](LOGGING.md)
 
 ---
 
