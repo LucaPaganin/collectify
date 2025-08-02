@@ -1,0 +1,1141 @@
+openapi: 3.1.3
+info:
+  title: Collectify API
+  description: API for the Collectify application - a platform for managing collections of items with customizable specifications.
+  version: 1.0.0
+  contact:
+    name: Collectify Support
+    url: https://github.com/LucaPaganin/collectify
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+paths:
+  /api/items:
+    get:
+      summary: Get all items
+      description: Retrieves a list of all items, with optional category filtering
+      parameters:
+        - name: category_id
+          in: query
+          description: Filter items by category ID
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+    post:
+      summary: Create a new item
+      description: Creates a new item in the collection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ItemCreateForm'
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}:
+    get:
+      summary: Get item by ID
+      description: Retrieves a specific item by its ID
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an item
+      description: Updates an existing item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ItemUpdateForm'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete an item
+      description: Deletes an item from the collection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Item deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Item deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/urls:
+    post:
+      summary: Add URL to item
+      description: Adds a URL to an item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: https://example.com
+      responses:
+        '201':
+          description: URL added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  url:
+                    type: string
+                    format: uri
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/urls/{url_id}:
+    delete:
+      summary: Delete URL from item
+      description: Deletes a URL from an item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+        - name: url_id
+          in: path
+          description: URL ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    example: success
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item or URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/photos:
+    post:
+      summary: Add photo to item
+      description: Adds a photo to an item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photos[]
+              properties:
+                'photos[]':
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Photo added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  filename:
+                    type: string
+        '400':
+          description: Invalid input or file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/categories:
+    get:
+      summary: Get all categories
+      description: Retrieves a list of all categories
+      responses:
+        '200':
+          description: A list of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+    post:
+      summary: Create a new category
+      description: Creates a new category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreate'
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid input or duplicate category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/categories/{category_id}:
+    put:
+      summary: Update a category
+      description: Updates an existing category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdate'
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Invalid input or duplicate category name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a category
+      description: Deletes a category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    example: success
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/categories/{category_id}/specifications_schema:
+    get:
+      summary: Get category specifications schema
+      description: Retrieves the specifications schema for a category
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category specifications schema
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategorySpecification'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update category specifications schema
+      description: Updates the specifications schema for a category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category_id
+          in: path
+          description: Category ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/CategorySpecification'
+                - type: object
+                  additionalProperties:
+                    $ref: '#/components/schemas/CategorySpecification'
+      responses:
+        '200':
+          description: Specifications schema updated successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategorySpecification'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Creates a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered successfully
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticates a user and returns a JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      summary: Get current user
+      description: Retrieves the current authenticated user's information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/users:
+    get:
+      summary: Get all users
+      description: Retrieves a list of all users (admin only)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/users/{user_id}:
+    get:
+      summary: Get user by ID
+      description: Retrieves a specific user by ID (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a user
+      description: Updates a user's information (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input or attempt to remove last admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a user
+      description: Deletes a user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deleted successfully
+        '400':
+          description: Cannot delete own account or last admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        is_admin:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - email
+        - is_admin
+
+    UserRegister:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        is_admin:
+          type: boolean
+      required:
+        - username
+        - email
+        - password
+
+    UserLogin:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 80
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        is_admin:
+          type: boolean
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        specifications_schema:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/CategorySpecification'
+        specifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySpecification'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+
+    CategoryCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        specifications_schema:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/CategorySpecification'
+            - type: object
+              additionalProperties:
+                $ref: '#/components/schemas/CategorySpecification'
+      required:
+        - name
+
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        specifications_schema:
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/CategorySpecification'
+            - type: object
+              additionalProperties:
+                $ref: '#/components/schemas/CategorySpecification'
+      required:
+        - name
+
+    CategorySpecification:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, number, select, textarea, date]
+          default: text
+        placeholder:
+          type: string
+        display_order:
+          type: integer
+        min:
+          type: number
+          description: For number type
+        max:
+          type: number
+          description: For number type
+        step:
+          type: number
+          description: For number type
+        options:
+          type: array
+          description: For select type
+          items:
+            type: string
+      required:
+        - key
+
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        category_name:
+          type: string
+        name:
+          type: string
+        brand:
+          type: string
+        serial_number:
+          type: string
+        description:
+          type: string
+        specification_values:
+          type: object
+          additionalProperties: true
+        ordered_specifications:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              value:
+                type: string
+              display_order:
+                type: integer
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              filename:
+                type: string
+        urls:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              url:
+                type: string
+                format: uri
+        primary_photo:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - category_id
+
+    ItemCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category_id:
+          type: integer
+        brand:
+          type: string
+        serial_number:
+          type: string
+        description:
+          type: string
+        specification_values:
+          type: object
+          additionalProperties: true
+        urls:
+          type: array
+          items:
+            oneOf:
+              - type: string
+                format: uri
+              - type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+      required:
+        - name
+        - category_id
+
+    ItemCreateForm:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category_id:
+          type: integer
+        brand:
+          type: string
+        serial_number:
+          type: string
+        description:
+          type: string
+        specification_values:
+          type: string
+          format: json
+        'urls[]':
+          type: array
+          items:
+            type: string
+            format: uri
+        'photos[]':
+          type: array
+          items:
+            type: string
+            format: binary
+      required:
+        - name
+        - category_id
+
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category_id:
+          type: integer
+        brand:
+          type: string
+        serial_number:
+          type: string
+        description:
+          type: string
+        specification_values:
+          type: object
+          additionalProperties: true
+        urls:
+          type: array
+          items:
+            oneOf:
+              - type: string
+                format: uri
+              - type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+
+    ItemUpdateForm:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category_id:
+          type: integer
+        brand:
+          type: string
+        serial_number:
+          type: string
+        description:
+          type: string
+        specification_values:
+          type: string
+          format: json
+        'urls[]':
+          type: array
+          items:
+            type: string
+            format: uri
+        'photos[]':
+          type: array
+          items:
+            type: string
+            format: binary
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
