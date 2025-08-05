@@ -26,6 +26,10 @@
   height: 48px;
 }
 
+.rememberMe {
+  margin-top: 8px;
+}
+
 .footer {
   margin-top: 24px;
   text-align: center;

@@ -3,10 +3,17 @@ import axios from 'axios';
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import LoginModal from '../components/LoginModal';
+import { useAuth } from '../context/AuthContext';
 
 const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const [categories, setCategories] = useState([]);
   const [specFields, setSpecFields] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [authInProgress, setAuthInProgress] = useState(false);
+  const { isAuthenticated } = useAuth();
   const [form, setForm] = useState({
     name: '',
     brand: '',
@@ -17,11 +24,23 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   });
 
   useEffect(() => {
-    // fetch categories
-    axios.get('/api/categories').then(res => {
-      setCategories(res.data);
-    });
-  }, []);
+    // Only fetch categories when the form is visible
+    if (show) {
+      const controller = new AbortController();
+      
+      axios.get('/api/categories', { signal: controller.signal })
+        .then(res => {
+          setCategories(res.data);
+        })
+        .catch(err => {
+          if (!axios.isCancel(err)) {
+            console.error('Error fetching categories:', err);
+          }
+        });
+        
+      return () => controller.abort();
+    }
+  }, [show]);
 
   useEffect(() => {
     if (initialData) {
@@ -39,6 +58,8 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   // Reset form on each open (show true)
   useEffect(() => {
     if (show) {
+      setError(null);
+      setAuthInProgress(false);
       if (initialData) {
         setForm({
           name: initialData.name || '',
@@ -55,9 +76,13 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   }, [show, initialData]);
 
   useEffect(() => {
-    if (form.category_id) {
+    if (form.category_id && show) {
+      const controller = new AbortController();
+      
       axios
-        .get(`/api/categories/${form.category_id}/specifications_schema`)
+        .get(`/api/categories/${form.category_id}/specifications_schema`, { 
+          signal: controller.signal 
+        })
         .then(res => {
           // Handle different possible response formats
           let specFields;
@@ -91,13 +116,17 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
           setSpecFields(specFields);
         })
         .catch((error) => {
-          console.error('Error fetching specification fields:', error);
-          setSpecFields([]);
+          if (!axios.isCancel(error)) {
+            console.error('Error fetching specification fields:', error);
+            setSpecFields([]);
+          }
         });
+        
+      return () => controller.abort();
     } else {
       setSpecFields([]);
     }
-  }, [form.category_id]);
+  }, [form.category_id, show]);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -108,8 +137,24 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     setForm(f => ({ ...f, specs: { ...f.specs, [field]: value } }));
   };
 
-  const handleSubmit = async e => {
-    e.preventDefault();
+  const handleSubmit = async (e, skipAuthCheck = false) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
+    // Check authentication status before proceeding, but skip if coming from login success
+    if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
+      setAuthInProgress(true);
+      setLoginModalOpen(true);
+      return;
+    }
+    
+    // Reset auth progress state
+    setAuthInProgress(false);
+    setLoginModalOpen(false);
+    
+    setIsLoading(true);
+    setError(null);
     
     try {
       // Prepare payload with properly formatted data
@@ -135,85 +180,75 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
         await axios.post('/api/items', JSON.stringify(payload), config);
       }
       
+      setIsLoading(false);
       onSave();
     } catch (error) {
       console.error('Error submitting item:', error);
-      // You could add error handling here, such as displaying an error message
+      setIsLoading(false);
+      setError(error.response?.data?.error || 'An error occurred while saving the item. Please try again.');
     }
   };
 
   return (
-    <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-2">
-          <label className="form-label">Category</label>
-          <select
-            className="form-select"
-            name="category_id"
-            value={form.category_id}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select category</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mb-2">
-          <Input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            label="Name"
-            placeholder="Item name"
-            required
-          />
-        </div>
-        <div className="mb-2">
-          <Input
-            name="brand"
-            value={form.brand}
-            onChange={handleChange}
-            label="Brand"
-            placeholder="Item brand (optional)"
-          />
-        </div>
-        <div className="mb-2">
-          <Input
-            name="serial"
-            value={form.serial}
-            onChange={handleChange}
-            label="Serial Number"
-            placeholder="Serial number (optional)"
-          />
-        </div>
-        <div className="mb-2">
-          <Input
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            label="Description"
-            placeholder="Item description (optional)"
-          />
-        </div>
-        {specFields.map(field => (
-          <div className="mb-2" key={field.name}>
-            <label className="form-label">{field.label}</label>
+    <>
+      <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-2">
+            <label className="form-label">Category</label>
+            <select
+              className="form-select"
+              name="category_id"
+              value={form.category_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select category</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-2">
             <Input
-              name={field.name}
-              value={form.specs[field.name] || ''}
-              onChange={e => handleSpecChange(field.name, e.target.value)}
-              placeholder={field.label}
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              label="Name"
+              placeholder="Item name"
+              required
             />
           </div>
-        ))}
-        <div className="mt-3 text-end">
-          <Button variant="secondary" type="button" onClick={onClose} className="me-2">Cancel</Button>
-          <Button type="submit">Save</Button>
-        </div>
-      </form>
-    </Modal>
+          {specFields.map(field => (
+            <div className="mb-2" key={field.name}>
+              <label className="form-label">{field.label}</label>
+              <Input
+                name={field.name}
+                value={form.specs[field.name] || ''}
+                onChange={e => handleSpecChange(field.name, e.target.value)}
+                placeholder={field.label}
+              />
+            </div>
+          ))}
+          <div className="mt-3 text-end">
+            {error && (
+              <div className="alert alert-danger mb-3" role="alert">
+                {error}
+              </div>
+            )}
+            <Button variant="secondary" type="button" onClick={onClose} className="me-2" disabled={isLoading}>Cancel</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      
+      <LoginModal 
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onSuccess={() => handleSubmit({ preventDefault: () => {} })}
+      />
+    </>
   );
 };
 

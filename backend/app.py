@@ -9,6 +9,7 @@ from routes.frontend import register_frontend_routes
 from routes.categories import register_category_routes
 from routes.items import register_item_routes
 from routes.auth import auth_bp
+from routes.admin_init import register_routes as register_admin_init_routes
 from flask_cli import register_commands
 
 # Create the Flask application
@@ -39,6 +40,7 @@ db.init_app(app)
 register_frontend_routes(app)
 register_category_routes(app)
 register_item_routes(app)
+register_admin_init_routes(app)
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
 # Using Flask's event system instead of before_first_request (which is removed in Flask 3.x)

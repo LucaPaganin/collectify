@@ -11,7 +11,9 @@ import {
   Tabs,
   Tab,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import styles from './LoginPage.module.css';
 
@@ -21,6 +23,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -40,7 +43,7 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(username, password);
+      await login(username, password, rememberMe);
       navigate('/admin');
     } catch (error) {
       setError(error.response?.data?.error || 'Login failed. Please check your credentials.');
@@ -130,6 +133,17 @@ const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               margin="normal"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox 
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Remember me"
+              className={styles.rememberMe}
             />
             <Button
               type="submit"

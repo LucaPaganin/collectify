@@ -31,15 +31,15 @@ const Navbar = ({ onNewItem }) => {
           Collectify
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
-        {!isAdminPage && onNewItem && (
+        {!isAdminPage && (
           <Button
             variant="contained"
             color="secondary"
-            startIcon={<AddCircleIcon />}
-            onClick={onNewItem}
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate('/admin')}
             sx={{ fontWeight: 500, background: '#fff', color: '#0d6efd', boxShadow: 'none', '&:hover': { background: '#e3eaff' } }}
           >
-            New Item
+            Admin Panel
           </Button>
         )}
       </Toolbar>

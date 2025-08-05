@@ -18,9 +18,12 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        """Set the password hash using SHA-256 algorithm (compatible with Python 3.13)."""
+        # Explicitly use sha256 instead of the default (scrypt) which is causing compatibility issues
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
         
     def check_password(self, password):
+        """Check if the provided password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
     
     def to_dict(self):

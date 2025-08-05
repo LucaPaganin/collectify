@@ -8,10 +8,16 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
+  // Try to get token from sessionStorage first, then localStorage
+  const getStoredToken = () => {
+    return sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
+  };
+
   const [currentUser, setCurrentUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('auth_token'));
+  const [token, setToken] = useState(getStoredToken());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('auth_token'));
 
   // Set up axios interceptor for authentication
   useEffect(() => {
@@ -51,14 +57,23 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   // Login function
-  const login = async (username, password) => {
+  const login = async (username, password, remember = false) => {
     try {
       setError(null);
       const response = await axios.post('/api/auth/login', { username, password });
       const { token, user } = response.data;
       
-      // Store token in localStorage
-      localStorage.setItem('auth_token', token);
+      // Always store token in sessionStorage (for current session)
+      sessionStorage.setItem('auth_token', token);
+      
+      // If remember me is checked, also store in localStorage
+      if (remember) {
+        localStorage.setItem('auth_token', token);
+        setRememberMe(true);
+      } else {
+        localStorage.removeItem('auth_token');
+        setRememberMe(false);
+      }
       
       // Update state
       setToken(token);
@@ -86,8 +101,10 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     localStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_token');
     setToken(null);
     setCurrentUser(null);
+    setRememberMe(false);
   };
 
   // Context value
@@ -99,6 +116,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    rememberMe,
+    setRememberMe,
     isAuthenticated: !!currentUser,
     isAdmin: currentUser?.is_admin || false,
   };
