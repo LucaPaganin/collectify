@@ -3,17 +3,23 @@ import axios from 'axios';
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import LoginModal from '../components/LoginModal';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuthUser, useIsAuthenticated } from 'react-auth-kit';
 
 const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const [categories, setCategories] = useState([]);
   const [specFields, setSpecFields] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [authInProgress, setAuthInProgress] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
+  // auth state
+  const auth = useAuthUser();
+  const isAuthenticated = useIsAuthenticated();
+  const currentUser = auth();
+  
+  // form state
   const [form, setForm] = useState({
     name: '',
     brand: '',
@@ -145,13 +151,14 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     // Check authentication status before proceeding, but skip if coming from login success
     if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
       setAuthInProgress(true);
-      setLoginModalOpen(true);
+      // Get the current location to redirect back after login
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
       return;
     }
     
     // Reset auth progress state
     setAuthInProgress(false);
-    setLoginModalOpen(false);
     
     setIsLoading(true);
     setError(null);
@@ -190,65 +197,57 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   };
 
   return (
-    <>
-      <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-2">
-            <label className="form-label">Category</label>
-            <select
-              className="form-select"
-              name="category_id"
-              value={form.category_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select category</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-2">
+    <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-2">
+          <label className="form-label">Category</label>
+          <select
+            className="form-select"
+            name="category_id"
+            value={form.category_id}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select category</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-2">
+          <Input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            label="Name"
+            placeholder="Item name"
+            required
+          />
+        </div>
+        {specFields.map(field => (
+          <div className="mb-2" key={field.name}>
+            <label className="form-label">{field.label}</label>
             <Input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              label="Name"
-              placeholder="Item name"
-              required
+              name={field.name}
+              value={form.specs[field.name] || ''}
+              onChange={e => handleSpecChange(field.name, e.target.value)}
+              placeholder={field.label}
             />
           </div>
-          {specFields.map(field => (
-            <div className="mb-2" key={field.name}>
-              <label className="form-label">{field.label}</label>
-              <Input
-                name={field.name}
-                value={form.specs[field.name] || ''}
-                onChange={e => handleSpecChange(field.name, e.target.value)}
-                placeholder={field.label}
-              />
+        ))}
+        <div className="mt-3 text-end">
+          {error && (
+            <div className="alert alert-danger mb-3" role="alert">
+              {error}
             </div>
-          ))}
-          <div className="mt-3 text-end">
-            {error && (
-              <div className="alert alert-danger mb-3" role="alert">
-                {error}
-              </div>
-            )}
-            <Button variant="secondary" type="button" onClick={onClose} className="me-2" disabled={isLoading}>Cancel</Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-      
-      <LoginModal 
-        open={loginModalOpen}
-        onClose={() => setLoginModalOpen(false)}
-        onSuccess={() => handleSubmit({ preventDefault: () => {} })}
-      />
-    </>
+          )}
+          <Button variant="secondary" type="button" onClick={onClose} className="me-2" disabled={isLoading}>Cancel</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

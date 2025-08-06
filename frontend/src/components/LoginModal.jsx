@@ -13,7 +13,8 @@ import {
   Alert,
   Box
 } from '@mui/material';
-import { useAuth } from '../context/AuthContext';
+import useSignIn from 'react-auth-kit/hooks/useSignIn';
+import axios from 'axios';
 
 const LoginModal = ({ open, onClose, onSuccess }) => {
   const [username, setUsername] = useState('');
@@ -22,7 +23,7 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login } = useAuth();
+  const signIn = useSignIn();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -30,7 +31,19 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
     setError('');
 
     try {
-      await login(username, password, rememberMe);
+      const response = await axios.post('/api/auth/login', { username, password });
+      const { token, refreshToken, user } = response.data;
+      
+      // Use react-auth-kit's signIn function
+      signIn({
+        token,
+        refreshToken,
+        expiresIn: 60 * 60, // 1 hour
+        refreshTokenExpireIn: rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60, // 30 days if remember me, 7 days otherwise
+        tokenType: 'Bearer',
+        authState: user // Store user info in auth state
+      });
+      
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {

@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import ItemForm from './ItemForm';
 import Navbar from '../components/Navbar';
-import LoginModal from '../components/LoginModal';
 import styles from './SearchPage.module.css';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+
+import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
+import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { cancellableGet, debounce } from '../utils/apiUtils';
 
 const SearchPage = () => {
@@ -18,10 +19,12 @@ const SearchPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(null);
-  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const searchTimeoutRef = useRef(null);
+  
+  // Navigation and auth
+  const navigate = useNavigate();
+  const auth = useAuthUser();
+  const isAuthenticated = useIsAuthenticated();
   
   // Cleanup function to cancel pending requests on unmount
   useEffect(() => {
@@ -61,15 +64,20 @@ const SearchPage = () => {
       setFormData(null); 
       setFormOpen(true); 
     } else {
-      setLoginPromptOpen(true);
+      // Redirect to login page with return URL
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
     }
   };
+  
   const openEdit = item => { 
     if (isAuthenticated) {
       setFormData(item); 
       setFormOpen(true); 
     } else {
-      setLoginPromptOpen(true);
+      // Redirect to login page with return URL
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
     }
   };
   
@@ -166,23 +174,6 @@ const SearchPage = () => {
             onSave={handleSave}
           />
         )}
-
-        {/* Login Modal */}
-        <LoginModal 
-          open={loginPromptOpen}
-          onClose={() => setLoginPromptOpen(false)}
-          onSuccess={() => {
-            // If user was trying to add a new item
-            if (!formData) {
-              setFormOpen(true);
-            } 
-            // If user was trying to edit an existing item
-            else {
-              setFormData(formData);
-              setFormOpen(true);
-            }
-          }}
-        />
       </div>
     </>
   );

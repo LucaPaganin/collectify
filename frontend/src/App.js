@@ -1,25 +1,28 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from 'react-auth-kit';
+import { RequireAuth } from 'react-auth-kit';
 import SearchPage from './containers/SearchPage';
 import AdminPage from './containers/AdminPage';
 import LoginPage from './containers/LoginPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider as CompatAuthProvider } from './context/CompatAuthContext';
 
-function App() {
+function App({ authStore }) {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<SearchPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminPage />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </Router>
+    <AuthProvider store={authStore}>
+      <CompatAuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<SearchPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={
+              <RequireAuth fallbackPath="/login">
+                <AdminPage />
+              </RequireAuth>
+            } />
+          </Routes>
+        </Router>
+      </CompatAuthProvider>
     </AuthProvider>
   );
 }

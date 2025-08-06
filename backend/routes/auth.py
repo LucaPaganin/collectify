@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import traceback
 from utils.decorators import log_exceptions
+import secrets
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -53,6 +54,19 @@ def admin_required(f):
         return f(current_user, *args, **kwargs)
     
     return decorated
+
+def generate_auth_token(user):
+    """Generate a new authentication token for a user"""
+    return jwt.encode({
+        'user_id': user.id,
+        'username': user.username,
+        'is_admin': user.is_admin,
+        'exp': datetime.utcnow() + timedelta(hours=1)  # Token expires after 1 hour
+    }, current_app.config['SECRET_KEY'], algorithm="HS256")
+
+def generate_refresh_token():
+    """Generate a random refresh token"""
+    return secrets.token_urlsafe(64)
 
 @auth_bp.route('/register', methods=['POST'])
 @log_exceptions
@@ -117,23 +131,83 @@ def login():
         return jsonify({'error': 'Invalid username or password'}), 401
     
     # Generate JWT token
-    token = jwt.encode({
+    token = generate_auth_token(user)
+    
+    # Generate refresh token
+    refresh_token = generate_refresh_token()
+    
+    # Store refresh token (you might want to add a refresh_token field to your User model)
+    # For simplicity, we'll store it in a dict for now
+    if not hasattr(current_app, 'refresh_tokens'):
+        current_app.refresh_tokens = {}
+    current_app.refresh_tokens[refresh_token] = {
         'user_id': user.id,
-        'username': user.username,
-        'is_admin': user.is_admin,
-        'exp': datetime.utcnow() + timedelta(hours=24)  # Token expires after 24 hours
-    }, current_app.config['SECRET_KEY'], algorithm="HS256")
+        'expires': datetime.utcnow() + timedelta(days=30)  # Refresh token expires after 30 days
+    }
     
     current_app.logger.info(f"User '{user.username}' logged in successfully")
     # Return token and user info
     return jsonify({
         'token': token,
+        'refreshToken': refresh_token,
         'user': {
             'id': user.id,
             'username': user.username,
             'email': user.email,
             'is_admin': user.is_admin
         }
+    }), 200
+
+@auth_bp.route('/refresh', methods=['POST'])
+@log_exceptions
+def refresh():
+    data = request.get_json()
+    
+    # Check if refresh token is provided
+    if not data or not data.get('refreshToken'):
+        current_app.logger.warning("Token refresh failed: Missing refresh token")
+        return jsonify({'error': 'Missing refresh token'}), 400
+    
+    refresh_token = data.get('refreshToken')
+    
+    # Check if refresh token exists and is valid
+    if not hasattr(current_app, 'refresh_tokens') or refresh_token not in current_app.refresh_tokens:
+        current_app.logger.warning("Token refresh failed: Invalid refresh token")
+        return jsonify({'error': 'Invalid refresh token'}), 401
+    
+    # Check if refresh token has expired
+    refresh_data = current_app.refresh_tokens[refresh_token]
+    if datetime.utcnow() > refresh_data['expires']:
+        # Remove expired refresh token
+        del current_app.refresh_tokens[refresh_token]
+        current_app.logger.warning("Token refresh failed: Refresh token expired")
+        return jsonify({'error': 'Refresh token expired'}), 401
+    
+    # Get user from refresh token
+    user = User.query.get(refresh_data['user_id'])
+    if not user:
+        # Remove invalid refresh token
+        del current_app.refresh_tokens[refresh_token]
+        current_app.logger.warning("Token refresh failed: User not found")
+        return jsonify({'error': 'User not found'}), 401
+    
+    # Generate new auth token
+    new_token = generate_auth_token(user)
+    
+    # Generate new refresh token (optional)
+    new_refresh_token = generate_refresh_token()
+    
+    # Update refresh token
+    del current_app.refresh_tokens[refresh_token]
+    current_app.refresh_tokens[new_refresh_token] = {
+        'user_id': user.id,
+        'expires': datetime.utcnow() + timedelta(days=30)
+    }
+    
+    current_app.logger.info(f"Token refreshed successfully for user '{user.username}'")
+    return jsonify({
+        'token': new_token,
+        'refreshToken': new_refresh_token
     }), 200
 
 @auth_bp.route('/me', methods=['GET'])

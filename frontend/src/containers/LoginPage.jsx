@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import useSignIn from 'react-auth-kit/hooks/useSignIn';
+import axios from 'axios';
 import {
   Container,
   Box,
@@ -18,64 +19,128 @@ import {
 import styles from './LoginPage.module.css';
 
 const LoginPage = () => {
-  const [tab, setTab] = useState(0);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  // Form and UI state management
+  const [formState, setFormState] = useState({
+    username: '',
+    password: '',
+    email: '',
+    confirmPassword: '',
+    rememberMe: false
+  });
+  
+  const [uiState, setUiState] = useState({
+    tab: 0,
+    loading: false,
+    error: '',
+    success: ''
+  });
 
-  const { login, register } = useAuth();
+  // Auth hooks from react-auth-kit
+  const signIn = useSignIn();
   const navigate = useNavigate();
+  
+  // Get the return URL from query parameters or default to "/"
+  const queryParams = new URLSearchParams(window.location.search);
+  const returnUrl = queryParams.get('returnUrl') || '/';
+
+  const handleInputChange = (e) => {
+    const { name, value, checked } = e.target;
+    setFormState({
+      ...formState,
+      [name]: name === 'rememberMe' ? checked : value
+    });
+  };
 
   const handleTabChange = (event, newValue) => {
-    setTab(newValue);
-    setError('');
-    setSuccess('');
+    setUiState({
+      ...uiState,
+      tab: newValue,
+      error: '',
+      success: ''
+    });
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setUiState({ ...uiState, loading: true, error: '' });
 
     try {
-      await login(username, password, rememberMe);
-      navigate('/admin');
+      const response = await axios.post('/api/auth/login', {
+        username: formState.username,
+        password: formState.password
+      });
+      
+      const { token, refreshToken, user } = response.data;
+      
+      // Use react-auth-kit's signIn function
+      const signInResult = signIn({
+        token,
+        refreshToken,
+        expiresIn: 60 * 60, // 1 hour
+        refreshTokenExpireIn: formState.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60, // 30 days if remember me, 7 days otherwise
+        tokenType: 'Bearer',
+        authState: user // Store user info in auth state
+      });
+      
+      if (signInResult) {
+        // Redirect to the return URL or admin page
+        navigate(returnUrl);
+      } else {
+        setUiState({
+          ...uiState,
+          loading: false,
+          error: 'Failed to sign in. Please try again.'
+        });
+      }
     } catch (error) {
-      setError(error.response?.data?.error || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
+      setUiState({
+        ...uiState,
+        loading: false,
+        error: error.response?.data?.error || 'Login failed. Please check your credentials.'
+      });
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
+    setUiState({ ...uiState, loading: true, error: '', success: '' });
 
     // Basic validation
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
+    if (formState.password !== formState.confirmPassword) {
+      setUiState({
+        ...uiState,
+        loading: false,
+        error: 'Passwords do not match'
+      });
       return;
     }
 
     try {
-      await register(username, password, email);
-      setSuccess('Registration successful! You can now log in.');
-      setTab(0); // Switch to login tab after successful registration
-      // Clear registration form
-      setEmail('');
-      setConfirmPassword('');
+      await axios.post('/api/auth/register', {
+        username: formState.username,
+        email: formState.email,
+        password: formState.password
+      });
+      
+      setUiState({
+        ...uiState,
+        loading: false,
+        tab: 0, // Switch to login tab
+        success: 'Registration successful! You can now log in.'
+      });
+      
+      // Clear registration form fields
+      setFormState({
+        ...formState,
+        email: '',
+        confirmPassword: ''
+      });
     } catch (error) {
-      setError(error.response?.data?.error || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+      setUiState({
+        ...uiState,
+        loading: false,
+        error: error.response?.data?.error || 'Registration failed. Please try again.'
+      });
     }
   };
 
@@ -92,7 +157,7 @@ const LoginPage = () => {
         </Box>
 
         <Tabs 
-          value={tab} 
+          value={uiState.tab} 
           onChange={handleTabChange} 
           variant="fullWidth" 
           className={styles.tabs}
@@ -101,44 +166,47 @@ const LoginPage = () => {
           <Tab label="Register" />
         </Tabs>
 
-        {error && (
+        {uiState.error && (
           <Alert severity="error" className={styles.alert}>
-            {error}
+            {uiState.error}
           </Alert>
         )}
 
-        {success && (
+        {uiState.success && (
           <Alert severity="success" className={styles.alert}>
-            {success}
+            {uiState.success}
           </Alert>
         )}
 
-        {tab === 0 ? (
+        {uiState.tab === 0 ? (
           <Box component="form" onSubmit={handleLogin} className={styles.form}>
             <TextField
+              name="username"
               label="Username"
               variant="outlined"
               fullWidth
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={formState.username}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
             <TextField
+              name="password"
               label="Password"
               type="password"
               variant="outlined"
               fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formState.password}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
             <FormControlLabel
               control={
                 <Checkbox 
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  name="rememberMe"
+                  checked={formState.rememberMe}
+                  onChange={handleInputChange}
                   color="primary"
                 />
               }
@@ -151,50 +219,54 @@ const LoginPage = () => {
               color="primary"
               fullWidth
               size="large"
-              disabled={loading}
+              disabled={uiState.loading}
               className={styles.submitButton}
             >
-              {loading ? <CircularProgress size={24} /> : 'Login'}
+              {uiState.loading ? <CircularProgress size={24} /> : 'Login'}
             </Button>
           </Box>
         ) : (
           <Box component="form" onSubmit={handleRegister} className={styles.form}>
             <TextField
+              name="username"
               label="Username"
               variant="outlined"
               fullWidth
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={formState.username}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
             <TextField
+              name="email"
               label="Email"
               type="email"
               variant="outlined"
               fullWidth
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formState.email}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
             <TextField
+              name="password"
               label="Password"
               type="password"
               variant="outlined"
               fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formState.password}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
             <TextField
+              name="confirmPassword"
               label="Confirm Password"
               type="password"
               variant="outlined"
               fullWidth
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              value={formState.confirmPassword}
+              onChange={handleInputChange}
               required
               margin="normal"
             />
@@ -204,10 +276,10 @@ const LoginPage = () => {
               color="primary"
               fullWidth
               size="large"
-              disabled={loading}
+              disabled={uiState.loading}
               className={styles.submitButton}
             >
-              {loading ? <CircularProgress size={24} /> : 'Register'}
+              {uiState.loading ? <CircularProgress size={24} /> : 'Register'}
             </Button>
           </Box>
         )}

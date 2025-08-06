@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import styles from './AdminPage.module.css';
-import { useAuth } from '../context/AuthContext';
+import { useAuthUser, useSignOut } from 'react-auth-kit';
 
 // Material UI imports
 import { 
@@ -47,7 +47,8 @@ import {
 
 const AdminPage = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const auth = useAuthUser();
+  const signOut = useSignOut();
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
@@ -308,7 +309,7 @@ const AdminPage = () => {
 
   // Handle logout
   const handleLogout = () => {
-    logout();
+    signOut();
     navigate('/login');
   };
 
@@ -340,7 +341,7 @@ const AdminPage = () => {
               Admin Panel
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              Logged in as {currentUser?.username}
+              Logged in as {auth?.user}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
