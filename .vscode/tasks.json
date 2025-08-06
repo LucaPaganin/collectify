@@ -5,7 +5,7 @@
         {
             "label": "Init Collectify DB Tables",
             "type": "shell",
-            "command": "${workspaceFolder}/venv/bin/python",
+            "command": "${workspaceFolder}/backend/.venv/bin/python",
             "args": [
                 "${workspaceFolder}/backend/init_all_tables.py"
             ],

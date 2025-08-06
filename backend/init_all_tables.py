@@ -33,7 +33,8 @@ def get_db_path():
     
     # Default path based on script location
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir) if os.path.basename(script_dir) == 'backend' else script_dir
+    # base_dir = os.path.dirname(script_dir) if os.path.basename(script_dir) == 'backend' else script_dir
+    base_dir = script_dir
     
     # Standard locations relative to detected base directory
     data_dir = os.path.join(base_dir, 'data')
