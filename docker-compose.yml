@@ -2,8 +2,8 @@ services:
 
   collectify-initdb:
     build:
-      context: .
-      dockerfile: backend/Dockerfile.initdb
+      context: ./backend
+      dockerfile: Dockerfile.initdb
     image: lucaplawliet/collectify-initdb:latest
     container_name: collectify-initdb
     environment:
@@ -17,8 +17,8 @@ services:
 
   collectify-backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     image: lucaplawliet/collectify-web:latest
     container_name: collectify-app
     ports:

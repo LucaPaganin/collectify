@@ -4,12 +4,12 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY frontend/package.json frontend/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps
 
 # Copy frontend source code
-COPY frontend/public ./public
-COPY frontend/src ./src
+COPY public ./public
+COPY src ./src
 
 # Expose port 3000 for the dev server
 EXPOSE 3000
