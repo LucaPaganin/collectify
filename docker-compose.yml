@@ -1,12 +1,29 @@
 services:
-  web:
-    build: .
+
+  collectify-initdb:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.initdb
+    image: lucaplawliet/collectify-initdb:latest
+    container_name: collectify-initdb
+    environment:
+      - COLLECTIFY_DB_PATH=/app/data/collectibles.db
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    volumes:
+      - collectify-data:/app/data
+    restart: "no"
+    entrypoint: ["python", "init_all_tables.py"]
+
+  collectify-backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: lucaplawliet/collectify-web:latest
     container_name: collectify-app
     ports:
       - "5000:5000"
     volumes:
-      # Mount the data directory for persistent database and uploads
       - collectify-data:/app/data
     environment:
       - FLASK_APP=app.py
@@ -14,8 +31,23 @@ services:
       - FLASK_RUN_HOST=0.0.0.0
       - FLASK_RUN_PORT=5000
       - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=password
+      - ADMIN_PASSWORD=admin
+    depends_on:
+      collectify-initdb:
+        condition: service_completed_successfully
     restart: always
+
+  collectify-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: lucaplawliet/collectify-frontend:latest
+    container_name: collectify-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - collectify-frontend-data:/app/data
 
 volumes:
   collectify-data:
+  collectify-frontend-data:

@@ -1,0 +1,25 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        // Task to initialize all database tables using the Python script in the virtual environment
+        {
+            "label": "Init Collectify DB Tables",
+            "type": "shell",
+            "command": "${workspaceFolder}/venv/bin/python",
+            "args": [
+                "${workspaceFolder}/backend/init_all_tables.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
