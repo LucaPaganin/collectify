@@ -11,10 +11,13 @@ import {
   CircularProgress,
   Typography,
   Alert,
-  Box
+  Box,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import useSignIn from 'react-auth-kit/hooks/useSignIn';
 import axios from 'axios';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 const LoginModal = ({ open, onClose, onSuccess }) => {
   const [username, setUsername] = useState('');
@@ -22,8 +25,13 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const signIn = useSignIn();
+
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword((show) => !show);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -44,9 +52,12 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
         authState: user // Store user info in auth state
       });
       
-      if (onSuccess) onSuccess();
+      if (onSuccess){
+         onSuccess()
+      };
       onClose();
     } catch (err) {
+      console.error('Login failed:', err);
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -59,6 +70,7 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
     setPassword('');
     setError('');
     setLoading(false);
+    setShowPassword(false);
     onClose();
   };
 
@@ -93,9 +105,22 @@ const LoginModal = ({ open, onClose, onSuccess }) => {
             required
             fullWidth
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            slotProps={{
+              input: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleTogglePasswordVisibility}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           
           <FormControlLabel

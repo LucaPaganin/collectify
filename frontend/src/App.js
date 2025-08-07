@@ -1,10 +1,9 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { RequireAuth } from 'react-auth-kit';
-import SearchPage from './containers/SearchPage';
-import AdminPage from './containers/AdminPage';
-import LoginPage from './containers/LoginPage';
-// import { AuthProvider as CompatAuthProvider } from './context/CompatAuthContext';
+import RequireAuth from 'react-auth-kit';
+import SearchPage from './containers/SearchPage.jsx';
+import AdminPage from './containers/AdminPage.jsx';
+import LoginPage from './containers/LoginPage.jsx';
 
 function App() {
   return (

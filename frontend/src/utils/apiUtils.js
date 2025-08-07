@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { api as authApi } from './authUtils';
 
 /**
  * Utility for making cancellable API requests
@@ -27,7 +28,7 @@ export const cancellableGet = async (url, requestId, config = {}) => {
   
   try {
     // Make the request with the signal
-    const response = await axios.get(url, {
+    const response = await authApi.get(url, {
       ...config,
       signal: controller.signal
     });
@@ -88,23 +89,3 @@ export const debounce = (func, wait) => {
     timeout = setTimeout(later, wait);
   };
 };
-
-// Export a pre-configured axios instance
-export const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Add response interceptor to handle common errors
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (!axios.isCancel(error)) {
-      // Log errors (but not cancellations)
-      console.error('API Error:', error);
-    }
-    return Promise.reject(error);
-  }
-);
