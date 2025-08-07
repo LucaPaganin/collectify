@@ -6,6 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { setupAuthInterceptor } from './utils/authUtils';
 import createStore from 'react-auth-kit/createStore';
+import { AuthProvider } from 'react-auth-kit';
 import { refreshApi } from './utils/authUtils';
 
 // Set up auth store
@@ -23,11 +24,17 @@ setupAuthInterceptor(() => {
   return token || null;
 });
 
+const rootApp = () => {
+  return (<React.StrictMode>
+    <AuthProvider store={authStore}>
+      <App />
+    </AuthProvider>
+  </React.StrictMode>)
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <App authStore={authStore} />
-  </React.StrictMode>
+  rootApp
 );
 
 // If you want to start measuring performance in your app, pass a function

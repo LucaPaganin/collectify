@@ -1,5 +1,4 @@
-import React, { createContext, useContext } from 'react';
-import useSignIn from 'react-auth-kit/hooks/useSignIn';
+import { createContext, useContext } from 'react';
 import useSignOut from 'react-auth-kit/hooks/useSignOut';
 import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';

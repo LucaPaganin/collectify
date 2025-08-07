@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
@@ -6,7 +6,6 @@ import ItemForm from './ItemForm';
 import Navbar from '../components/Navbar';
 import styles from './SearchPage.module.css';
 
-import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { cancellableGet, debounce } from '../utils/apiUtils';
 
@@ -23,15 +22,16 @@ const SearchPage = () => {
   
   // Navigation and auth
   const navigate = useNavigate();
-  const auth = useAuthUser();
   const isAuthenticated = useIsAuthenticated();
   
   // Cleanup function to cancel pending requests on unmount
   useEffect(() => {
+    // Return a cleanup function that uses the current value of the ref
     return () => {
       // This will be called when component unmounts
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+      const timeoutId = searchTimeoutRef.current;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
   }, []);

@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
-import { useAuthUser, useIsAuthenticated } from 'react-auth-kit';
+import { useIsAuthenticated } from 'react-auth-kit';
 
 const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const [categories, setCategories] = useState([]);
@@ -15,9 +15,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const navigate = useNavigate();
   
   // auth state
-  const auth = useAuthUser();
   const isAuthenticated = useIsAuthenticated();
-  const currentUser = auth();
   
   // form state
   const [form, setForm] = useState({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Divider,
   FormControl,
   Grid,
   IconButton,
@@ -51,7 +50,6 @@ const AdminPage = () => {
   const signOut = useSignOut();
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [editingCategory, setEditingCategory] = useState(null);
   const [openSpecsModal, setOpenSpecsModal] = useState(false);
   const [currentCategoryId, setCurrentCategoryId] = useState(null);
   const [currentCategoryName, setCurrentCategoryName] = useState('');
