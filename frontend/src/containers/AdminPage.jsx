@@ -678,7 +678,7 @@ const AdminPage = () => {
               )}
             </List>
             
-            <CategoryForm onAddCategory={addCategory} />
+            <CategoryForm onSubmit={addCategory} />
           </CardContent>
         </Card>
       </Container>

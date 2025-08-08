@@ -3,15 +3,22 @@ import { TextField, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import styles from '../../containers/AdminPage.module.css';
 
-const CategoryForm = ({ onAddCategory }) => {
+const CategoryForm = ({ onSubmit, onAddCategory }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // For backwards compatibility, use whichever prop is available
+  const submitHandler = onAddCategory || onSubmit;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
     
-    onAddCategory(newCategoryName);
-    setNewCategoryName('');
+    if (typeof submitHandler === 'function') {
+      submitHandler(newCategoryName);
+      setNewCategoryName('');
+    } else {
+      console.error('No valid handler provided to CategoryForm');
+    }
   };
 
   return (
