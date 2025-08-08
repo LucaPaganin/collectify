@@ -209,32 +209,50 @@ const LoginPage = () => {
       });
       
       const { token, refreshToken, user } = response.data;
+      const realUser = {
+        name: user.username,
+        uid: user.id,
+        email: user.email,
+        isAdmin: user.is_admin
+      }
       
-      // Use react-auth-kit's signIn function
-      const signInResult = signIn({
-        token,
-        refreshToken,
-        expiresIn: 60 * 60, // 1 hour
-        refreshTokenExpireIn: formData.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60, // 30 days if remember me, 7 days otherwise
-        tokenType: 'Bearer',
-        authState: user // Store user info in auth state
-      });
-      
-      if (signInResult) {
-        // Redirect to the return URL or admin page
-        navigate(returnUrl);
-      } else {
+      try {
+        // Use react-auth-kit's signIn function
+        const signInResult = signIn({
+          auth: {
+            token: token,
+            type: 'Bearer'
+          },
+          refresh: refreshToken,
+          userState: realUser
+        });
+        
+        if (signInResult) {
+          // Redirect to the return URL or admin page
+          // Use a timeout to ensure state updates are processed before navigation
+          setTimeout(() => {
+            navigate(returnUrl);
+          }, 100);
+        } else {
+          setUiState(prevState => ({
+            ...prevState,
+            loading: false,
+            error: 'Failed to sign in. Please try again.'
+          }));
+        }
+      } catch (signInError) {
+        console.error('SignIn Error:', signInError);
         setUiState(prevState => ({
           ...prevState,
           loading: false,
-          error: 'Failed to sign in. Please try again.'
+          error: `Authentication error: ${signInError.message}`
         }));
       }
     } catch (error) {
       setUiState(prevState => ({
         ...prevState,
         loading: false,
-        error: error.response?.data?.error || 'Login failed. Please check your credentials.'
+        error: error.response?.data?.error || `Login failed: ${error.message}`
       }));
     }
   }, [signIn, navigate, returnUrl]);

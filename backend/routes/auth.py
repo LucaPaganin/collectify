@@ -64,9 +64,13 @@ def generate_auth_token(user):
         'exp': datetime.utcnow() + timedelta(hours=1)  # Token expires after 1 hour
     }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-def generate_refresh_token():
-    """Generate a random refresh token"""
-    return secrets.token_urlsafe(64)
+def generate_refresh_token(user):
+    """Generate a JWT refresh token with a longer expiration time"""
+    return jwt.encode({
+        'user_id': user.id,
+        'token_type': 'refresh',
+        'exp': datetime.utcnow() + timedelta(days=30)  # Refresh token expires after 30 days
+    }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
 @auth_bp.route('/register', methods=['POST'])
 @log_exceptions
@@ -133,17 +137,8 @@ def login():
     # Generate JWT token
     token = generate_auth_token(user)
     
-    # Generate refresh token
-    refresh_token = generate_refresh_token()
-    
-    # Store refresh token (you might want to add a refresh_token field to your User model)
-    # For simplicity, we'll store it in a dict for now
-    if not hasattr(current_app, 'refresh_tokens'):
-        current_app.refresh_tokens = {}
-    current_app.refresh_tokens[refresh_token] = {
-        'user_id': user.id,
-        'expires': datetime.utcnow() + timedelta(days=30)  # Refresh token expires after 30 days
-    }
+    # Generate JWT refresh token
+    refresh_token = generate_refresh_token(user)
     
     current_app.logger.info(f"User '{user.username}' logged in successfully")
     # Return token and user info
@@ -170,45 +165,39 @@ def refresh():
     
     refresh_token = data.get('refreshToken')
     
-    # Check if refresh token exists and is valid
-    if not hasattr(current_app, 'refresh_tokens') or refresh_token not in current_app.refresh_tokens:
-        current_app.logger.warning("Token refresh failed: Invalid refresh token")
-        return jsonify({'error': 'Invalid refresh token'}), 401
-    
-    # Check if refresh token has expired
-    refresh_data = current_app.refresh_tokens[refresh_token]
-    if datetime.utcnow() > refresh_data['expires']:
-        # Remove expired refresh token
-        del current_app.refresh_tokens[refresh_token]
+    try:
+        # Decode and validate refresh token
+        refresh_data = jwt.decode(refresh_token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+        
+        # Verify this is a refresh token
+        if refresh_data.get('token_type') != 'refresh':
+            current_app.logger.warning("Token refresh failed: Invalid token type")
+            return jsonify({'error': 'Invalid refresh token'}), 401
+        
+        # Get user from refresh token
+        user = User.query.get(refresh_data['user_id'])
+        if not user:
+            current_app.logger.warning("Token refresh failed: User not found")
+            return jsonify({'error': 'User not found'}), 401
+        
+        # Generate new auth token
+        new_token = generate_auth_token(user)
+        
+        # Generate new refresh token
+        new_refresh_token = generate_refresh_token(user)
+        
+        current_app.logger.info(f"Token refreshed successfully for user '{user.username}'")
+        return jsonify({
+            'token': new_token,
+            'refreshToken': new_refresh_token
+        }), 200
+        
+    except jwt.ExpiredSignatureError:
         current_app.logger.warning("Token refresh failed: Refresh token expired")
         return jsonify({'error': 'Refresh token expired'}), 401
-    
-    # Get user from refresh token
-    user = User.query.get(refresh_data['user_id'])
-    if not user:
-        # Remove invalid refresh token
-        del current_app.refresh_tokens[refresh_token]
-        current_app.logger.warning("Token refresh failed: User not found")
-        return jsonify({'error': 'User not found'}), 401
-    
-    # Generate new auth token
-    new_token = generate_auth_token(user)
-    
-    # Generate new refresh token (optional)
-    new_refresh_token = generate_refresh_token()
-    
-    # Update refresh token
-    del current_app.refresh_tokens[refresh_token]
-    current_app.refresh_tokens[new_refresh_token] = {
-        'user_id': user.id,
-        'expires': datetime.utcnow() + timedelta(days=30)
-    }
-    
-    current_app.logger.info(f"Token refreshed successfully for user '{user.username}'")
-    return jsonify({
-        'token': new_token,
-        'refreshToken': new_refresh_token
-    }), 200
+    except jwt.InvalidTokenError as e:
+        current_app.logger.warning(f"Token refresh failed: Invalid refresh token - {str(e)}")
+        return jsonify({'error': 'Invalid refresh token'}), 401
 
 @auth_bp.route('/me', methods=['GET'])
 @token_required
