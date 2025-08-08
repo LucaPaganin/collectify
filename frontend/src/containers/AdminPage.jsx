@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { api } from '../utils/authUtils'; // Import the configured api
 import useSignOut from 'react-auth-kit/hooks/useSignOut';
 import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 
@@ -71,7 +72,7 @@ const AdminPage = () => {
     setState(prev => ({ ...prev, loading: true }));
     
     try {
-      const response = await axios.get('/api/categories');
+      const response = await api.get('/categories');
       setState(prev => ({ 
         ...prev, 
         categories: response.data,
@@ -86,7 +87,7 @@ const AdminPage = () => {
   // Fetch specifications schema for a category
   const fetchSpecificationsSchema = async (categoryId, categoryName) => {
     try {
-      const response = await axios.get(`/api/categories/${categoryId}/specifications_schema`);
+      const response = await api.get(`/categories/${categoryId}/specifications_schema`);
       
       // Process the response data based on its structure
       let specs;
@@ -139,7 +140,7 @@ const AdminPage = () => {
   // Add a new category
   const addCategory = async (categoryName) => {
     try {
-      const response = await axios.post('/api/categories', { name: categoryName });
+      const response = await api.post('/categories', { name: categoryName });
       setState(prev => ({
         ...prev,
         categories: [...prev.categories, response.data].sort((a, b) => a.name.localeCompare(b.name))
@@ -153,7 +154,7 @@ const AdminPage = () => {
   // Update a category name
   const updateCategory = async (updatedCategory) => {
     try {
-      const response = await axios.put(`/api/categories/${updatedCategory.id}`, { name: updatedCategory.name });
+      const response = await api.put(`/categories/${updatedCategory.id}`, { name: updatedCategory.name });
       setState(prev => ({
         ...prev,
         categories: prev.categories.map(cat => 
@@ -178,7 +179,7 @@ const AdminPage = () => {
     const categoryId = state.modals.deleteCategory.id;
     
     try {
-      await axios.delete(`/api/categories/${categoryId}`);
+      await api.delete(`/categories/${categoryId}`);
       setState(prev => ({
         ...prev,
         categories: prev.categories.filter(cat => cat.id !== categoryId),
@@ -361,8 +362,8 @@ const AdminPage = () => {
       }));
 
       // Send properly formatted specifications
-      await axios.put(
-        `/api/categories/${categoryId}/specifications_schema`, 
+      await api.put(
+        `/categories/${categoryId}/specifications_schema`, 
         formattedSpecs,
         { headers: { 'Content-Type': 'application/json' } }
       );
