@@ -24,7 +24,7 @@ api.interceptors.response.use(
 // Create refresh token functionality
 export const refreshApi = createRefresh({
   interval: 10, // refresh token every 10 minutes
-  refreshApiCallback: async ({ refreshToken, authToken }) => {
+  refreshApiCallback: async ({ authToken, refreshToken }) => {
     try {
       // Call the backend refresh endpoint with the refresh token
       const response = await api.post('/auth/refresh', { 
@@ -38,14 +38,14 @@ export const refreshApi = createRefresh({
       return {
         isSuccess: true,
         newAuthToken: response.data.token,
-        newAuthTokenExpireIn: 60 * 60, // 1 hour
         newRefreshToken: response.data.refreshToken,
-        newRefreshTokenExpiresIn: 30 * 24 * 60 * 60 // 30 days
+        newAuthTokenExpireIn: 60 * 60 // 1 hour
       };
     } catch (error) {
       console.error('Failed to refresh token:', error);
       return {
-        isSuccess: false
+        isSuccess: false,
+        newAuthToken: null
       };
     }
   }

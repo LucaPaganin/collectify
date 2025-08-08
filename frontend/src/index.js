@@ -20,7 +20,7 @@ const authStore = createStore({
 
 // Set up axios interceptors for authentication
 setupAuthInterceptor(() => {
-  const token = authStore.getState().auth?.token;
+  const token = authStore.tokenObject;
   return token || null;
 });
 

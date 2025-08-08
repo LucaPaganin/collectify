@@ -36,10 +36,13 @@
             "request": "launch",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/frontend",
+            "sourceMaps": true,
+            "trace": true,
             "sourceMapPathOverrides": {
                 "webpack:///src/*": "${webRoot}/src/*",
+                "webpack:///./*": "${webRoot}/*", 
                 "webpack:///./~/*": "${webRoot}/node_modules/*",
-                "webpack:///./*": "${webRoot}/*",
+                "webpack:///node_modules/*": "${webRoot}/node_modules/*",
                 "webpack:///*": "*"
             }
         }

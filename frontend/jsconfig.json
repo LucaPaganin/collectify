@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
     "baseUrl": "src",
-    "checkJs": false,
     "jsx": "react",
     "paths": {
       "*": ["*"]
     },
     "sourceMap": true,
-    "target": "ES6"
+    "target": "ES2020",
+    "module": "commonjs",
+    // "moduleResolution": "node",
+    // "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build", "dist"]
