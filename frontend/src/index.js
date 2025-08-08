@@ -6,7 +6,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { setupAuthInterceptor } from './utils/authUtils';
 import createStore from 'react-auth-kit/createStore';
-import AuthProvider from 'react-auth-kit/AuthProvider';
+import AuthProvider from 'react-auth-kit';
 import { refreshApi } from './utils/authUtils';
 
 // Set up auth store
@@ -36,4 +36,4 @@ root.render(
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+reportWebVitals(console.log);
