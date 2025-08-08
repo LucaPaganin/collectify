@@ -36,8 +36,6 @@
             ],
             "sourceMapPathOverrides": {
                 "webpack:///src/*": "${webRoot}/src/*",
-                "webpack:///./*": "${webRoot}/*", 
-                "webpack:///./~/*": "${webRoot}/node_modules/*",
                 "webpack:///node_modules/*": "${webRoot}/node_modules/*",
                 "webpack:///*": "*"
             }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useSignIn from 'react-auth-kit/hooks/useSignIn';
 import axios from 'axios';
@@ -18,16 +18,162 @@ import {
 } from '@mui/material';
 import styles from './LoginPage.module.css';
 
-const LoginPage = () => {
-  // Form and UI state management
-  const [formState, setFormState] = useState({
+// Login Form Component
+const LoginForm = ({ onLogin, loading }) => {
+  const [formData, setFormData] = useState({
     username: '',
     password: '',
-    email: '',
-    confirmPassword: '',
     rememberMe: false
   });
-  
+
+  const handleChange = (e) => {
+    const { name, value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'rememberMe' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(formData);
+  };
+
+  return (
+    <Box component="form" onSubmit={handleSubmit} className={styles.form}>
+      <TextField
+        name="username"
+        label="Username"
+        variant="outlined"
+        fullWidth
+        value={formData.username}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <TextField
+        name="password"
+        label="Password"
+        type="password"
+        variant="outlined"
+        fullWidth
+        value={formData.password}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <FormControlLabel
+        control={
+          <Checkbox 
+            name="rememberMe"
+            checked={formData.rememberMe}
+            onChange={handleChange}
+            color="primary"
+          />
+        }
+        label="Remember me"
+        className={styles.rememberMe}
+      />
+      <Button
+        type="submit"
+        variant="contained"
+        color="primary"
+        fullWidth
+        size="large"
+        disabled={loading}
+        className={styles.submitButton}
+      >
+        {loading ? <CircularProgress size={24} /> : 'Login'}
+      </Button>
+    </Box>
+  );
+};
+
+// Register Form Component
+const RegisterForm = ({ onRegister, loading }) => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onRegister(formData);
+  };
+
+  return (
+    <Box component="form" onSubmit={handleSubmit} className={styles.form}>
+      <TextField
+        name="username"
+        label="Username"
+        variant="outlined"
+        fullWidth
+        value={formData.username}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <TextField
+        name="email"
+        label="Email"
+        type="email"
+        variant="outlined"
+        fullWidth
+        value={formData.email}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <TextField
+        name="password"
+        label="Password"
+        type="password"
+        variant="outlined"
+        fullWidth
+        value={formData.password}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <TextField
+        name="confirmPassword"
+        label="Confirm Password"
+        type="password"
+        variant="outlined"
+        fullWidth
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        required
+        margin="normal"
+      />
+      <Button
+        type="submit"
+        variant="contained"
+        color="primary"
+        fullWidth
+        size="large"
+        disabled={loading}
+        className={styles.submitButton}
+      >
+        {loading ? <CircularProgress size={24} /> : 'Register'}
+      </Button>
+    </Box>
+  );
+};
+
+// Main LoginPage Component
+const LoginPage = () => {
+  // UI state
   const [uiState, setUiState] = useState({
     tab: 0,
     loading: false,
@@ -43,31 +189,23 @@ const LoginPage = () => {
   const queryParams = new URLSearchParams(window.location.search);
   const returnUrl = queryParams.get('returnUrl') || '/';
 
-  const handleInputChange = (e) => {
-    const { name, value, checked } = e.target;
-    setFormState({
-      ...formState,
-      [name]: name === 'rememberMe' ? checked : value
-    });
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setUiState({
-      ...uiState,
+  const handleTabChange = useCallback((event, newValue) => {
+    setUiState(prevState => ({
+      ...prevState,
       tab: newValue,
       error: '',
       success: ''
-    });
-  };
+    }));
+  }, []);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setUiState({ ...uiState, loading: true, error: '' });
+  // Handle login submission from child component
+  const handleLogin = useCallback(async (formData) => {
+    setUiState(prevState => ({ ...prevState, loading: true, error: '' }));
 
     try {
       const response = await axios.post('/api/auth/login', {
-        username: formState.username,
-        password: formState.password
+        username: formData.username,
+        password: formData.password
       });
       
       const { token, refreshToken, user } = response.data;
@@ -77,7 +215,7 @@ const LoginPage = () => {
         token,
         refreshToken,
         expiresIn: 60 * 60, // 1 hour
-        refreshTokenExpireIn: formState.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60, // 30 days if remember me, 7 days otherwise
+        refreshTokenExpireIn: formData.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60, // 30 days if remember me, 7 days otherwise
         tokenType: 'Bearer',
         authState: user // Store user info in auth state
       });
@@ -86,63 +224,56 @@ const LoginPage = () => {
         // Redirect to the return URL or admin page
         navigate(returnUrl);
       } else {
-        setUiState({
-          ...uiState,
+        setUiState(prevState => ({
+          ...prevState,
           loading: false,
           error: 'Failed to sign in. Please try again.'
-        });
+        }));
       }
     } catch (error) {
-      setUiState({
-        ...uiState,
+      setUiState(prevState => ({
+        ...prevState,
         loading: false,
         error: error.response?.data?.error || 'Login failed. Please check your credentials.'
-      });
+      }));
     }
-  };
+  }, [signIn, navigate, returnUrl]);
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setUiState({ ...uiState, loading: true, error: '', success: '' });
+  // Handle registration submission from child component
+  const handleRegister = useCallback(async (formData) => {
+    setUiState(prevState => ({ ...prevState, loading: true, error: '', success: '' }));
 
     // Basic validation
-    if (formState.password !== formState.confirmPassword) {
-      setUiState({
-        ...uiState,
+    if (formData.password !== formData.confirmPassword) {
+      setUiState(prevState => ({
+        ...prevState,
         loading: false,
         error: 'Passwords do not match'
-      });
+      }));
       return;
     }
 
     try {
       await axios.post('/api/auth/register', {
-        username: formState.username,
-        email: formState.email,
-        password: formState.password
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
       });
       
-      setUiState({
-        ...uiState,
+      setUiState(prevState => ({
+        ...prevState,
         loading: false,
         tab: 0, // Switch to login tab
         success: 'Registration successful! You can now log in.'
-      });
-      
-      // Clear registration form fields
-      setFormState({
-        ...formState,
-        email: '',
-        confirmPassword: ''
-      });
+      }));
     } catch (error) {
-      setUiState({
-        ...uiState,
+      setUiState(prevState => ({
+        ...prevState,
         loading: false,
         error: error.response?.data?.error || 'Registration failed. Please try again.'
-      });
+      }));
     }
-  };
+  }, []);
 
   return (
     <Container maxWidth="sm" className={styles.container}>
@@ -179,109 +310,15 @@ const LoginPage = () => {
         )}
 
         {uiState.tab === 0 ? (
-          <Box component="form" onSubmit={handleLogin} className={styles.form}>
-            <TextField
-              name="username"
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={formState.username}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <TextField
-              name="password"
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={formState.password}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox 
-                  name="rememberMe"
-                  checked={formState.rememberMe}
-                  onChange={handleInputChange}
-                  color="primary"
-                />
-              }
-              label="Remember me"
-              className={styles.rememberMe}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="large"
-              disabled={uiState.loading}
-              className={styles.submitButton}
-            >
-              {uiState.loading ? <CircularProgress size={24} /> : 'Login'}
-            </Button>
-          </Box>
+          <LoginForm 
+            onLogin={handleLogin} 
+            loading={uiState.loading} 
+          />
         ) : (
-          <Box component="form" onSubmit={handleRegister} className={styles.form}>
-            <TextField
-              name="username"
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={formState.username}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              variant="outlined"
-              fullWidth
-              value={formState.email}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <TextField
-              name="password"
-              label="Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={formState.password}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <TextField
-              name="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={formState.confirmPassword}
-              onChange={handleInputChange}
-              required
-              margin="normal"
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="large"
-              disabled={uiState.loading}
-              className={styles.submitButton}
-            >
-              {uiState.loading ? <CircularProgress size={24} /> : 'Register'}
-            </Button>
-          </Box>
+          <RegisterForm 
+            onRegister={handleRegister} 
+            loading={uiState.loading} 
+          />
         )}
 
         <Box className={styles.footer}>
