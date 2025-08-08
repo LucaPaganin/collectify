@@ -60,7 +60,7 @@ const SearchPage = () => {
   ).current;
 
   const openNew = () => { 
-    if (isAuthenticated) {
+    if (isAuthenticated()) {
       setFormData(null); 
       setFormOpen(true); 
     } else {
@@ -71,7 +71,7 @@ const SearchPage = () => {
   };
   
   const openEdit = item => { 
-    if (isAuthenticated) {
+    if (isAuthenticated()) {
       setFormData(item); 
       setFormOpen(true); 
     } else {
@@ -140,7 +140,7 @@ const SearchPage = () => {
                       <Button variant="link" onClick={() => { setSelectedItem(item); setModalOpen(true); }}>
                         View
                       </Button>
-                      {isAuthenticated && (
+                      {isAuthenticated() && (
                         <Button variant="link" onClick={() => openEdit(item)}>Edit</Button>
                       )}
                     </div>

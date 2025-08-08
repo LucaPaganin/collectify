@@ -1,6 +1,6 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import RequireAuth from 'react-auth-kit';
+import { RequireAuth } from 'react-auth-kit';
 import SearchPage from './containers/SearchPage.jsx';
 import AdminPage from './containers/AdminPage.jsx';
 import LoginPage from './containers/LoginPage.jsx';

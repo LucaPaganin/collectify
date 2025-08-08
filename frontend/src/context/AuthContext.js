@@ -5,7 +5,8 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
+// Renamed to LegacyAuthProvider to avoid conflict with react-auth-kit's AuthProvider
+export const LegacyAuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

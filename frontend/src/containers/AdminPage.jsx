@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import styles from './AdminPage.module.css';
-import { useAuthUser, useSignOut } from 'react-auth-kit';
+import useSignOut from 'react-auth-kit/hooks/useSignOut';
+import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
 
 // Material UI imports
 import { 

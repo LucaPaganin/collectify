@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
-import { useIsAuthenticated } from 'react-auth-kit';
+import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 
 const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const [categories, setCategories] = useState([]);
