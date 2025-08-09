@@ -21,7 +21,8 @@ const authStore = createStore({
 // Set up axios interceptors for authentication
 setupAuthInterceptor(() => {
   // Access the token correctly from the auth state
-  return authStore.getState()?.auth?.token || null;
+  let token = authStore.tokenObject.authValue.auth.token;
+  return token || null;
 });
 
 // Custom PrivateRoute component instead of using RequireAuth

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from 'axios'; // Keep for axios.isCancel
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
+import { api } from '../utils/authUtils';
 
 const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   const [categories, setCategories] = useState([]);
@@ -32,7 +33,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     if (show) {
       const controller = new AbortController();
       
-      axios.get('/api/categories', { signal: controller.signal })
+      api.get('/api/categories', { signal: controller.signal })
         .then(res => {
           setCategories(res.data);
         })
@@ -83,7 +84,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     if (form.category_id && show) {
       const controller = new AbortController();
       
-      axios
+      api
         .get(`/api/categories/${form.category_id}/specifications_schema`, { 
           signal: controller.signal 
         })
@@ -180,9 +181,9 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
       };
       
       if (initialData && initialData.id) {
-        await axios.put(`/api/items/${initialData.id}`, JSON.stringify(payload), config);
+        await api.put(`/api/items/${initialData.id}`, JSON.stringify(payload), config);
       } else {
-        await axios.post('/api/items', JSON.stringify(payload), config);
+        await api.post('/api/items', JSON.stringify(payload), config);
       }
       
       setIsLoading(false);
