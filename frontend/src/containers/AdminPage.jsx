@@ -705,17 +705,14 @@ const AdminPage = () => {
         categoryName={state.modals.specifications.categoryName}
         specifications={state.modals.specifications.specifications}
         onClose={closeSpecificationsModal}
-        onAddField={addSpecificationField}
-        onUpdateField={updateSpecificationField}
-        onRemoveField={removeSpecificationField}
+  onAddSpecification={addSpecificationField}
+  onUpdateSpecification={updateSpecificationField}
+  onRemoveSpecification={removeSpecificationField}
         onSave={saveSpecificationsSchema}
-        onAddOption={addSpecOption}
-        onUpdateOption={handleSpecOptionChange}
-        onRemoveOption={removeSpecOption}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+  onDragStart={handleDragStart}
+  onDragEnd={handleDragEnd}
+  onDragOver={handleDragOver}
+  onDrop={handleDrop}
       />
 
       {/* Snackbar for notifications */}

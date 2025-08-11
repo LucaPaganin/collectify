@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios'; // Keep for axios.isCancel
 import Modal from '../components/Modal';
 import Input from '../components/Input';
@@ -7,12 +7,16 @@ import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
 
-const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
+const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFile = null, onAutoUploadConsumed = null }) => {
   const [categories, setCategories] = useState([]);
   const [specFields, setSpecFields] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(initialData?.primary_photo_url || null);
   const [authInProgress, setAuthInProgress] = useState(false);
+  const cameraInputRef = useRef(null);
   const navigate = useNavigate();
   
   // auth state
@@ -21,9 +25,6 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
   // form state
   const [form, setForm] = useState({
     name: '',
-    brand: '',
-    serial: '',
-    description: '',
     category_id: '',
     specs: {},
   });
@@ -33,7 +34,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     if (show) {
       const controller = new AbortController();
       
-      api.get('/api/categories', { signal: controller.signal })
+  api.get('/categories', { signal: controller.signal })
         .then(res => {
           setCategories(res.data);
         })
@@ -51,12 +52,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     if (initialData) {
       setForm({
         name: initialData.name || '',
-        brand: initialData.brand || '',
-        serial: initialData.serial || '',
-        description: initialData.description || '',
         category_id: initialData.category_id || '',
         specs: initialData.specs || {},
       });
+  setPhotoPreviewUrl(initialData.primary_photo_url || null);
     }
   }, [initialData]);
 
@@ -68,14 +67,13 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
       if (initialData) {
         setForm({
           name: initialData.name || '',
-          brand: initialData.brand || '',
-          serial: initialData.serial || '',
-          description: initialData.description || '',
           category_id: initialData.category_id || '',
           specs: initialData.specs || {},
         });
+  setPhotoPreviewUrl(initialData.primary_photo_url || null);
       } else {
-        setForm({ name: '', brand: '', serial: '', description: '', category_id: '', specs: {} });
+        setForm({ name: '', category_id: '', specs: {} });
+  setPhotoPreviewUrl(null);
       }
     }
   }, [show, initialData]);
@@ -85,7 +83,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
       const controller = new AbortController();
       
       api
-        .get(`/api/categories/${form.category_id}/specifications_schema`, { 
+        .get(`/categories/${form.category_id}/specifications_schema`, { 
           signal: controller.signal 
         })
         .then(res => {
@@ -167,10 +165,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
       const payload = {
         name: form.name,
         category_id: form.category_id,
-        brand: form.brand || '',  // Include brand as optional
-        serial_number: form.serial || '',  // Include serial number as optional
-        description: form.description || '',  // Include description as optional
-        specification_values: form.specs || {}  // Ensure specs are included
+        specification_values: form.specs || {}
       };
       
       // Set the appropriate content type for JSON data
@@ -181,13 +176,14 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
       };
       
       if (initialData && initialData.id) {
-        await api.put(`/api/items/${initialData.id}`, JSON.stringify(payload), config);
+        const res = await api.put(`/items/${initialData.id}`, JSON.stringify(payload), config);
+        setIsLoading(false);
+        onSave(res?.data || initialData);
       } else {
-        await api.post('/api/items', JSON.stringify(payload), config);
+        const res = await api.post('/items', JSON.stringify(payload), config);
+        setIsLoading(false);
+        onSave(res?.data);
       }
-      
-      setIsLoading(false);
-      onSave();
     } catch (error) {
       console.error('Error submitting item:', error);
       setIsLoading(false);
@@ -195,9 +191,49 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
     }
   };
 
+  // Upload a single photo (available in edit mode)
+  const handlePhotoUpload = async (e) => {
+    const file = e?.target?.files ? e.target.files[0] : e; // support direct File param
+    if (!file || !(initialData && initialData.id)) return;
+    setPhotoError(null);
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photos[]', file);
+      const res = await api.post(`/items/${initialData.id}/photos`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setPhotoUploading(false);
+      const filename = res?.data?.filename;
+      if (filename) {
+        setPhotoPreviewUrl(`/uploads/${filename}`);
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setPhotoUploading(false);
+      setPhotoError(err.response?.data?.error || 'Failed to upload image.');
+    }
+  };
+
+  // Auto-upload provided photo file when in edit mode
+  useEffect(() => {
+    if (show && initialData?.id && autoUploadPhotoFile instanceof File) {
+      handlePhotoUpload(autoUploadPhotoFile).finally(() => {
+        if (onAutoUploadConsumed) onAutoUploadConsumed();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, initialData?.id, autoUploadPhotoFile]);
+
   return (
     <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
+        {/* Always show current photo (or placeholder) when viewing/editing an existing item */}
+        {initialData && photoPreviewUrl && (
+          <div className="mb-3">
+            <img src={photoPreviewUrl} alt="Item" style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 12 }} />
+          </div>
+        )}
         <div className="mb-2">
           <label className="form-label">Category</label>
           <select
@@ -234,6 +270,50 @@ const ItemForm = ({ show, onClose, onSave, initialData = null }) => {
             />
           </div>
         ))}
+        {/* Photo upload controls only when editing an existing item */}
+        {initialData && initialData.id && (
+          <div className="mb-3">
+            <label className="form-label">Add image</label>
+            <div className="d-flex align-items-center gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="form-control"
+                onChange={handlePhotoUpload}
+                disabled={photoUploading}
+                style={{ flex: 1 }}
+              />
+              <Button
+                type="button"
+                onClick={() => cameraInputRef.current && cameraInputRef.current.click()}
+                disabled={photoUploading}
+              >
+                Camera
+              </Button>
+            </div>
+            {/* hidden input that forces camera capture on supported devices */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const f = e.target.files && e.target.files[0];
+                if (f) handlePhotoUpload(f);
+                // reset so selecting the same file again re-triggers change
+                e.target.value = '';
+              }}
+            />
+            {photoUploading && (
+              <div className="form-text">Uploading...</div>
+            )}
+            {photoError && (
+              <div className="text-danger small mt-1">{photoError}</div>
+            )}
+          </div>
+        )}
         <div className="mt-3 text-end">
           {error && (
             <div className="alert alert-danger mb-3" role="alert">
