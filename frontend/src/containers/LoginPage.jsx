@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useSignIn from 'react-auth-kit/hooks/useSignIn';
-import axios from 'axios';
+import { api } from '../utils/authUtils';
 import {
   Container,
   Box,
@@ -203,7 +203,7 @@ const LoginPage = () => {
     setUiState(prevState => ({ ...prevState, loading: true, error: '' }));
 
     try {
-      const response = await axios.post('/api/auth/login', {
+  const response = await api.post('/auth/login', {
         username: formData.username,
         password: formData.password
       });
@@ -272,7 +272,7 @@ const LoginPage = () => {
     }
 
     try {
-      await axios.post('/api/auth/register', {
+  await api.post('/auth/register', {
         username: formData.username,
         email: formData.email,
         password: formData.password

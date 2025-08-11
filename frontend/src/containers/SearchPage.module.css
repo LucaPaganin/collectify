@@ -12,7 +12,7 @@
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   padding: 32px 40px 24px 40px;
-  max-width: 480px;
+  max-width: 700px;
   width: 100%;
   margin-bottom: 32px;
 }
@@ -29,12 +29,12 @@
   margin-bottom: 0;
 }
 .searchInput {
-  flex: 2;
+  flex: 3;
   min-width: 0;
 }
 .searchSelect {
   flex: 1;
-  min-width: 180px;
+  min-width: 160px;
 }
 .searchBtn {
   flex: 0;
@@ -50,8 +50,22 @@
   background: #005be6 !important;
   color: #fff !important;
 }
+.cameraBtn {
+  flex: 0;
+  border-radius: 8px !important;
+  background: #0ea5e9 !important; /* blue */
+  color: #fff !important;
+  border: none !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: background 0.2s;
+}
+.cameraBtn:hover, .cameraBtn:focus {
+  background: #0284c7 !important;
+  color: #fff !important;
+}
 .resultsSection {
-  max-width: 480px;
+  max-width: 700px;
   width: 100%;
 }
 .newItemBtn {
