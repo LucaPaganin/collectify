@@ -17,6 +17,11 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(initialData?.primary_photo_url || null);
   const [authInProgress, setAuthInProgress] = useState(false);
   const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
   const navigate = useNavigate();
   
   // auth state
@@ -215,6 +220,76 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     }
   };
 
+  // Start/stop camera and capture photo using MediaDevices API
+  const startCamera = async () => {
+    setCameraError(null);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      // Fallback to hidden file input if camera API not available
+      if (cameraInputRef.current) cameraInputRef.current.click();
+      return;
+    }
+    try {
+      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Some browsers require play to be called from a user gesture; we're in a click handler
+        await videoRef.current.play();
+      }
+      setIsCameraOpen(true);
+    } catch (err) {
+      console.error('Camera error:', err);
+      setCameraError(err?.message || 'Unable to access camera.');
+      // As a fallback, open the file picker
+      if (cameraInputRef.current) cameraInputRef.current.click();
+    }
+  };
+
+  const stopCamera = () => {
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    } finally {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      streamRef.current = null;
+      setIsCameraOpen(false);
+    }
+  };
+
+  const takePhoto = async () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        setCameraError('Failed to capture image.');
+        return;
+      }
+      const file = new File([blob], 'camera.jpg', { type: 'image/jpeg' });
+      await handlePhotoUpload(file);
+      stopCamera();
+    }, 'image/jpeg', 0.92);
+  };
+
+  // Ensure camera stops if dialog closes
+  useEffect(() => {
+    if (!show && isCameraOpen) {
+      stopCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
+
   // Auto-upload provided photo file when in edit mode
   useEffect(() => {
     if (show && initialData?.id && autoUploadPhotoFile instanceof File) {
@@ -286,7 +361,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
               />
               <Button
                 type="button"
-                onClick={() => cameraInputRef.current && cameraInputRef.current.click()}
+                onClick={startCamera}
                 disabled={photoUploading}
               >
                 Camera
@@ -306,6 +381,19 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
                 e.target.value = '';
               }}
             />
+            {isCameraOpen && (
+              <div className="mt-2">
+                {cameraError && (
+                  <div className="text-danger small mb-2">{cameraError}</div>
+                )}
+                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: 8, background: '#000' }} />
+                <div className="mt-2 text-end">
+                  <Button type="button" variant="secondary" className="me-2" onClick={stopCamera}>Cancel</Button>
+                  <Button type="button" onClick={takePhoto}>Take Photo</Button>
+                </div>
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+              </div>
+            )}
             {photoUploading && (
               <div className="form-text">Uploading...</div>
             )}

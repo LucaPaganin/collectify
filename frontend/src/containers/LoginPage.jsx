@@ -203,19 +203,30 @@ const LoginPage = () => {
     setUiState(prevState => ({ ...prevState, loading: true, error: '' }));
 
     try {
-  const response = await api.post('/auth/login', {
+      const response = await api.post('/auth/login', {
         username: formData.username,
         password: formData.password
       });
-      
-      const { token, refreshToken, user } = response.data;
+
+      // Defensive: check for expected fields
+      const data = response.data;
+      if (!data || !data.token || !data.refreshToken || !data.user) {
+        setUiState(prevState => ({
+          ...prevState,
+          loading: false,
+          error: 'Unexpected server response. Please try again or contact support.'
+        }));
+        return;
+      }
+
+      const { token, refreshToken, user } = data;
       const realUser = {
         name: user.username,
         uid: user.id,
         email: user.email,
         isAdmin: user.is_admin
-      }
-      
+      };
+
       try {
         // Use react-auth-kit's signIn function
         const signInResult = signIn({
@@ -226,7 +237,7 @@ const LoginPage = () => {
           refresh: refreshToken,
           userState: realUser
         });
-        
+
         if (signInResult) {
           // Redirect to the return URL or admin page
           // Use a timeout to ensure state updates are processed before navigation
