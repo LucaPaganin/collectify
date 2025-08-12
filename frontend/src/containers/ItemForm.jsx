@@ -7,21 +7,262 @@ import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
 
+// Component for handling camera capture functionality
+const CameraCapture = ({ onCapture, onCancel }) => {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [cameraError, setCameraError] = useState(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  // Initialize camera on component mount
+  useEffect(() => {
+    startCamera();
+    // Clean up on unmount
+    return () => {
+      stopCamera();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Camera access not supported in this browser');
+      return;
+    }
+    
+    try {
+      // Request camera access with options for rear camera if available
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      
+      streamRef.current = stream;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        
+        // Wait for video to actually start playing
+        videoRef.current.onloadeddata = () => {
+          setIsStreaming(true);
+        };
+        
+        // Start playing the video
+        try {
+          await videoRef.current.play();
+        } catch (err) {
+          console.error('Failed to play video stream:', err);
+          setCameraError('Could not play video stream. Please check camera permissions.');
+        }
+      }
+    } catch (err) {
+      console.error('Camera error:', err);
+      setCameraError(err.message || 'Failed to access camera');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+      videoRef.current.onloadeddata = null;
+    }
+    
+    setIsStreaming(false);
+  };
+
+  const handleTakePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      setCameraError('Camera is not ready');
+      return;
+    }
+    
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      // Set canvas size to match video dimensions
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw the current video frame to canvas
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert canvas to blob
+      canvas.toBlob(blob => {
+        if (!blob) {
+          setCameraError('Failed to capture image');
+          return;
+        }
+        
+        // Create file from blob
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+        
+        // Pass the captured photo back to parent component
+        onCapture(file);
+      }, 'image/jpeg', 0.92);
+    } catch (err) {
+      console.error('Error capturing photo:', err);
+      setCameraError('Failed to capture photo');
+    }
+  };
+
+  return (
+    <div className="camera-capture mt-3">
+      {cameraError && (
+        <div className="alert alert-danger">{cameraError}</div>
+      )}
+      
+      <div className="position-relative mb-3">
+        <video 
+          ref={videoRef}
+          autoPlay 
+          playsInline
+          style={{ 
+            width: '100%', 
+            borderRadius: '8px',
+            background: '#000',
+            display: 'block'
+          }}
+        />
+        
+        {!isStreaming && (
+          <div 
+            className="position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+          >
+            <div className="spinner-border text-light" role="status">
+              <span className="visually-hidden">Loading camera...</span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="d-flex justify-content-between mt-2">
+        <Button variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleTakePhoto} 
+          disabled={!isStreaming}
+        >
+          Take Photo
+        </Button>
+      </div>
+      
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    </div>
+  );
+};
+
+// Component for handling photo uploads
+const PhotoUpload = ({ initialData, onPhotoUpload }) => {
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handlePhotoUpload = async (file) => {
+    if (!file || !initialData?.id) return;
+    
+    setPhotoError(null);
+    setPhotoUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('photos[]', file);
+      
+      const res = await api.post(`/items/${initialData.id}/photos`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const filename = res?.data?.filename;
+      if (filename) {
+        onPhotoUpload(`/uploads/${filename}`);
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setPhotoError(err.response?.data?.error || 'Failed to upload image');
+    } finally {
+      setPhotoUploading(false);
+      setShowCamera(false);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handlePhotoUpload(file);
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCameraCapture = (file) => {
+    handlePhotoUpload(file);
+  };
+
+  return (
+    <div className="photo-upload mb-3">
+      <label className="form-label">Add image</label>
+      
+      {!showCamera ? (
+        <div className="d-flex align-items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            className="form-control"
+            onChange={handleFileInputChange}
+            disabled={photoUploading}
+            style={{ flex: 1 }}
+          />
+          <Button
+            type="button"
+            onClick={() => setShowCamera(true)}
+            disabled={photoUploading}
+          >
+            Camera
+          </Button>
+        </div>
+      ) : (
+        <CameraCapture 
+          onCapture={handleCameraCapture}
+          onCancel={() => setShowCamera(false)}
+        />
+      )}
+      
+      {photoUploading && (
+        <div className="form-text mt-2">Uploading...</div>
+      )}
+      
+      {photoError && (
+        <div className="text-danger small mt-2">{photoError}</div>
+      )}
+    </div>
+  );
+};
+
+// Main ItemForm component
 const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFile = null, onAutoUploadConsumed = null }) => {
   const [categories, setCategories] = useState([]);
   const [specFields, setSpecFields] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoError, setPhotoError] = useState(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(initialData?.primary_photo_url || null);
   const [authInProgress, setAuthInProgress] = useState(false);
-  const cameraInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [cameraError, setCameraError] = useState(null);
   const navigate = useNavigate();
   
   // auth state
@@ -34,12 +275,12 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     specs: {},
   });
 
+  // Fetch categories when form is visible
   useEffect(() => {
-    // Only fetch categories when the form is visible
     if (show) {
       const controller = new AbortController();
       
-  api.get('/categories', { signal: controller.signal })
+      api.get('/categories', { signal: controller.signal })
         .then(res => {
           setCategories(res.data);
         })
@@ -53,6 +294,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     }
   }, [show]);
 
+  // Initialize form with initialData when available
   useEffect(() => {
     if (initialData) {
       setForm({
@@ -60,29 +302,31 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         category_id: initialData.category_id || '',
         specs: initialData.specs || {},
       });
-  setPhotoPreviewUrl(initialData.primary_photo_url || null);
+      setPhotoPreviewUrl(initialData.primary_photo_url || null);
     }
   }, [initialData]);
 
-  // Reset form on each open (show true)
+  // Reset form on each open
   useEffect(() => {
     if (show) {
       setError(null);
       setAuthInProgress(false);
+      
       if (initialData) {
         setForm({
           name: initialData.name || '',
           category_id: initialData.category_id || '',
           specs: initialData.specs || {},
         });
-  setPhotoPreviewUrl(initialData.primary_photo_url || null);
+        setPhotoPreviewUrl(initialData.primary_photo_url || null);
       } else {
         setForm({ name: '', category_id: '', specs: {} });
-  setPhotoPreviewUrl(null);
+        setPhotoPreviewUrl(null);
       }
     }
   }, [show, initialData]);
 
+  // Fetch specification fields when category changes
   useEffect(() => {
     if (form.category_id && show) {
       const controller = new AbortController();
@@ -93,35 +337,38 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         })
         .then(res => {
           // Handle different possible response formats
-          let specFields;
+          let fields;
+          
           if (Array.isArray(res.data)) {
             // Array format
-            specFields = res.data.map(spec => ({
+            fields = res.data.map(spec => ({
               name: spec.key,
               label: spec.label || spec.key,
               type: spec.type || 'text',
-              placeholder: spec.placeholder || ''
+              placeholder: spec.placeholder || '',
+              display_order: spec.display_order
             }));
           } else if (typeof res.data === 'object' && !Array.isArray(res.data)) {
             // Object format
-            specFields = Object.entries(res.data).map(([key, spec]) => ({
+            fields = Object.entries(res.data).map(([key, spec]) => ({
               name: key,
               label: spec.label || key,
               type: spec.type || 'text',
-              placeholder: spec.placeholder || ''
+              placeholder: spec.placeholder || '',
+              display_order: spec.display_order
             }));
           } else {
-            specFields = [];
+            fields = [];
           }
           
           // Sort by display_order if available
-          specFields.sort((a, b) => {
+          fields.sort((a, b) => {
             const orderA = a.display_order !== undefined ? a.display_order : 0;
             const orderB = b.display_order !== undefined ? b.display_order : 0;
             return orderA - orderB;
           });
           
-          setSpecFields(specFields);
+          setSpecFields(fields);
         })
         .catch((error) => {
           if (!axios.isCancel(error)) {
@@ -136,21 +383,29 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     }
   }, [form.category_id, show]);
 
+  // Handle form field change
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   };
 
+  // Handle specification field change
   const handleSpecChange = (field, value) => {
     setForm(f => ({ ...f, specs: { ...f.specs, [field]: value } }));
   };
 
+  // Handle photo upload
+  const handlePhotoUploaded = (url) => {
+    setPhotoPreviewUrl(url);
+  };
+
+  // Handle form submission
   const handleSubmit = async (e, skipAuthCheck = false) => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
     
-    // Check authentication status before proceeding, but skip if coming from login success
+    // Check authentication status before proceeding
     if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
       setAuthInProgress(true);
       // Get the current location to redirect back after login
@@ -196,106 +451,32 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     }
   };
 
-  // Upload a single photo (available in edit mode)
-  const handlePhotoUpload = async (e) => {
-    const file = e?.target?.files ? e.target.files[0] : e; // support direct File param
-    if (!file || !(initialData && initialData.id)) return;
-    setPhotoError(null);
-    setPhotoUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('photos[]', file);
-      const res = await api.post(`/items/${initialData.id}/photos`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setPhotoUploading(false);
-      const filename = res?.data?.filename;
-      if (filename) {
-        setPhotoPreviewUrl(`/uploads/${filename}`);
-      }
-    } catch (err) {
-      console.error('Error uploading photo:', err);
-      setPhotoUploading(false);
-      setPhotoError(err.response?.data?.error || 'Failed to upload image.');
-    }
-  };
-
-  // Start/stop camera and capture photo using MediaDevices API
-  const startCamera = async () => {
-    setCameraError(null);
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      // Fallback to hidden file input if camera API not available
-      if (cameraInputRef.current) cameraInputRef.current.click();
-      return;
-    }
-    try {
-      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // Some browsers require play to be called from a user gesture; we're in a click handler
-        await videoRef.current.play();
-      }
-      setIsCameraOpen(true);
-    } catch (err) {
-      console.error('Camera error:', err);
-      setCameraError(err?.message || 'Unable to access camera.');
-      // As a fallback, open the file picker
-      if (cameraInputRef.current) cameraInputRef.current.click();
-    }
-  };
-
-  const stopCamera = () => {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-    } finally {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      streamRef.current = null;
-      setIsCameraOpen(false);
-    }
-  };
-
-  const takePhoto = async () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    const w = video.videoWidth || 1280;
-    const h = video.videoHeight || 720;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, w, h);
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        setCameraError('Failed to capture image.');
-        return;
-      }
-      const file = new File([blob], 'camera.jpg', { type: 'image/jpeg' });
-      await handlePhotoUpload(file);
-      stopCamera();
-    }, 'image/jpeg', 0.92);
-  };
-
-  // Ensure camera stops if dialog closes
-  useEffect(() => {
-    if (!show && isCameraOpen) {
-      stopCamera();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show]);
-
   // Auto-upload provided photo file when in edit mode
   useEffect(() => {
     if (show && initialData?.id && autoUploadPhotoFile instanceof File) {
-      handlePhotoUpload(autoUploadPhotoFile).finally(() => {
-        if (onAutoUploadConsumed) onAutoUploadConsumed();
-      });
+      const uploadFile = async () => {
+        try {
+          const formData = new FormData();
+          formData.append('photos[]', autoUploadPhotoFile);
+          
+          const res = await api.post(`/items/${initialData.id}/photos`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          
+          const filename = res?.data?.filename;
+          if (filename) {
+            setPhotoPreviewUrl(`/uploads/${filename}`);
+          }
+        } catch (err) {
+          console.error('Error auto-uploading photo:', err);
+        } finally {
+          if (onAutoUploadConsumed) {
+            onAutoUploadConsumed();
+          }
+        }
+      };
+      
+      uploadFile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, initialData?.id, autoUploadPhotoFile]);
@@ -303,12 +484,23 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   return (
     <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        {/* Always show current photo (or placeholder) when viewing/editing an existing item */}
+        {/* Show current photo when available */}
         {initialData && photoPreviewUrl && (
           <div className="mb-3">
-            <img src={photoPreviewUrl} alt="Item" style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 12 }} />
+            <img 
+              src={photoPreviewUrl} 
+              alt="Item" 
+              style={{ 
+                width: '100%', 
+                maxHeight: 280, 
+                objectFit: 'cover', 
+                borderRadius: 12 
+              }} 
+            />
           </div>
         )}
+        
+        {/* Category selection */}
         <div className="mb-2">
           <label className="form-label">Category</label>
           <select
@@ -324,6 +516,8 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             ))}
           </select>
         </div>
+        
+        {/* Item name */}
         <div className="mb-2">
           <Input
             name="name"
@@ -334,6 +528,8 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             required
           />
         </div>
+        
+        {/* Dynamic specification fields */}
         {specFields.map(field => (
           <div className="mb-2" key={field.name}>
             <label className="form-label">{field.label}</label>
@@ -345,70 +541,31 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             />
           </div>
         ))}
-        {/* Photo upload controls only when editing an existing item */}
+        
+        {/* Photo upload controls - only when editing an existing item */}
         {initialData && initialData.id && (
-          <div className="mb-3">
-            <label className="form-label">Add image</label>
-            <div className="d-flex align-items-center gap-2">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="form-control"
-                onChange={handlePhotoUpload}
-                disabled={photoUploading}
-                style={{ flex: 1 }}
-              />
-              <Button
-                type="button"
-                onClick={startCamera}
-                disabled={photoUploading}
-              >
-                Camera
-              </Button>
-            </div>
-            {/* hidden input that forces camera capture on supported devices */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const f = e.target.files && e.target.files[0];
-                if (f) handlePhotoUpload(f);
-                // reset so selecting the same file again re-triggers change
-                e.target.value = '';
-              }}
-            />
-            {isCameraOpen && (
-              <div className="mt-2">
-                {cameraError && (
-                  <div className="text-danger small mb-2">{cameraError}</div>
-                )}
-                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: 8, background: '#000' }} />
-                <div className="mt-2 text-end">
-                  <Button type="button" variant="secondary" className="me-2" onClick={stopCamera}>Cancel</Button>
-                  <Button type="button" onClick={takePhoto}>Take Photo</Button>
-                </div>
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-              </div>
-            )}
-            {photoUploading && (
-              <div className="form-text">Uploading...</div>
-            )}
-            {photoError && (
-              <div className="text-danger small mt-1">{photoError}</div>
-            )}
-          </div>
+          <PhotoUpload 
+            initialData={initialData} 
+            onPhotoUpload={handlePhotoUploaded} 
+          />
         )}
+        
+        {/* Form actions */}
         <div className="mt-3 text-end">
           {error && (
             <div className="alert alert-danger mb-3" role="alert">
               {error}
             </div>
           )}
-          <Button variant="secondary" type="button" onClick={onClose} className="me-2" disabled={isLoading}>Cancel</Button>
+          <Button 
+            variant="secondary" 
+            type="button" 
+            onClick={onClose} 
+            className="me-2" 
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? 'Saving...' : 'Save'}
           </Button>

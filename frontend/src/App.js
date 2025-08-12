@@ -21,7 +21,14 @@ const authStore = createStore({
 // Set up axios interceptors for authentication
 setupAuthInterceptor(() => {
   // Access the token correctly from the auth state
-  let token = authStore.tokenObject.authValue.auth.token;
+  let token;
+  const authVal = authStore.tokenObject.value;
+  if (authVal.isSignIn){
+    token = authVal.auth.token;
+  }
+  else if (authVal.isUsingRefreshToken) {
+    token = authVal.refresh.token;
+  }
   return token || null;
 });
 

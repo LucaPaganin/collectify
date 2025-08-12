@@ -208,9 +208,13 @@ const LoginPage = () => {
         password: formData.password
       });
 
+      console.log('Login response:', response); // Full response debug
+      console.log('Response data:', response.data); // Data object debug
+      
       // Defensive: check for expected fields
       const data = response.data;
       if (!data || !data.token || !data.refreshToken || !data.user) {
+        console.error('Missing expected data in response:', data);
         setUiState(prevState => ({
           ...prevState,
           loading: false,
@@ -260,10 +264,16 @@ const LoginPage = () => {
         }));
       }
     } catch (error) {
+      console.error('Login error:', error);
+      console.error('Response data:', error.response?.data);
+      // Try to extract useful information for debugging
+      const errorDetails = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error';
+      const statusCode = error.response?.status ? ` (${error.response.status})` : '';
+
       setUiState(prevState => ({
         ...prevState,
         loading: false,
-        error: error.response?.data?.error || `Login failed: ${error.message}`
+        error: `Login failed${statusCode}: ${errorDetails}`
       }));
     }
   }, [signIn, navigate, returnUrl]);

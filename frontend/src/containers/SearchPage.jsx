@@ -15,7 +15,6 @@ const SearchPage = () => {
   const [categoriesList, setCategoriesList] = useState([]);
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(null);
   const searchTimeoutRef = useRef(null);
@@ -171,9 +170,6 @@ const SearchPage = () => {
                   <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center">
                     <span>{item.name}</span>
                     <div>
-                      <Button variant="link" onClick={() => { setSelectedItem(item); setFormOpen(true); }}>
-                        View
-                      </Button>
                       {isAuthenticated() && (
                         <Button variant="link" onClick={() => openEdit(item)}>Edit</Button>
                       )}
