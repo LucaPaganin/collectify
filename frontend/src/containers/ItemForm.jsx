@@ -168,10 +168,11 @@ const CameraCapture = ({ onCapture, onCancel }) => {
 };
 
 // Component for handling photo uploads
-const PhotoUpload = ({ initialData, onPhotoUpload }) => {
+const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
   const fileInputRef = useRef(null);
 
   const handlePhotoUpload = async (file) => {
@@ -197,7 +198,7 @@ const PhotoUpload = ({ initialData, onPhotoUpload }) => {
       setPhotoError(err.response?.data?.error || 'Failed to upload image');
     } finally {
       setPhotoUploading(false);
-      setShowCamera(false);
+      setCapturedPhoto(null);
     }
   };
 
@@ -211,14 +212,102 @@ const PhotoUpload = ({ initialData, onPhotoUpload }) => {
   };
 
   const handleCameraCapture = (file) => {
-    handlePhotoUpload(file);
+    // Create temporary URL for preview
+    const objectUrl = URL.createObjectURL(file);
+    setCapturedPhoto({
+      file: file,
+      previewUrl: objectUrl
+    });
+    
+    // Don't automatically upload - wait for user to save the form
+    setShowCamera(false);
+    onPhotoUpload(objectUrl); // Set temporary preview
+  };
+
+  // Handle saving the captured photo
+  const handleSavePhoto = () => {
+    if (capturedPhoto?.file) {
+      handlePhotoUpload(capturedPhoto.file);
+    }
+  };
+
+  // Handle discarding the captured photo
+  const handleDiscardPhoto = () => {
+    if (capturedPhoto?.previewUrl) {
+      URL.revokeObjectURL(capturedPhoto.previewUrl);
+    }
+    setCapturedPhoto(null);
+    setShowCamera(false);
+    // Restore original photo URL
+    if (currentPhotoUrl && !currentPhotoUrl.startsWith('blob:')) {
+      onPhotoUpload(currentPhotoUrl);
+    } else {
+      onPhotoUpload(null);
+    }
   };
 
   return (
     <div className="photo-upload mb-3">
-      <label className="form-label">Add image</label>
+      <label className="form-label">Item Image</label>
       
-      {!showCamera ? (
+      {showCamera ? (
+        <CameraCapture 
+          onCapture={handleCameraCapture}
+          onCancel={() => setShowCamera(false)}
+        />
+      ) : capturedPhoto ? (
+        <div className="mb-3">
+          <img 
+            src={capturedPhoto.previewUrl} 
+            alt="Captured" 
+            style={{ 
+              width: '100%', 
+              maxHeight: 280, 
+              objectFit: 'cover', 
+              borderRadius: 12 
+            }} 
+          />
+          <div className="d-flex gap-2 mt-2">
+            <Button variant="outline-danger" onClick={handleDiscardPhoto} className="flex-grow-1">
+              Discard
+            </Button>
+            <Button variant="primary" onClick={handleSavePhoto} className="flex-grow-1">
+              Use Photo
+            </Button>
+          </div>
+        </div>
+      ) : currentPhotoUrl && !photoUploading ? (
+        <div className="mb-3">
+          <img 
+            src={currentPhotoUrl} 
+            alt="Item" 
+            style={{ 
+              width: '100%', 
+              maxHeight: 280, 
+              objectFit: 'cover', 
+              borderRadius: 12 
+            }} 
+          />
+          <div className="d-flex align-items-center gap-2 mt-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="form-control"
+              onChange={handleFileInputChange}
+              disabled={photoUploading}
+              style={{ flex: 1 }}
+            />
+            <Button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              disabled={photoUploading}
+            >
+              Camera
+            </Button>
+          </div>
+        </div>
+      ) : (
         <div className="d-flex align-items-center gap-2">
           <input
             type="file"
@@ -237,19 +326,21 @@ const PhotoUpload = ({ initialData, onPhotoUpload }) => {
             Camera
           </Button>
         </div>
-      ) : (
-        <CameraCapture 
-          onCapture={handleCameraCapture}
-          onCancel={() => setShowCamera(false)}
-        />
       )}
       
       {photoUploading && (
-        <div className="form-text mt-2">Uploading...</div>
+        <div className="alert alert-info mt-2">
+          <div className="d-flex align-items-center">
+            <div className="spinner-border spinner-border-sm me-2" role="status">
+              <span className="visually-hidden">Uploading...</span>
+            </div>
+            <span>Uploading photo...</span>
+          </div>
+        </div>
       )}
       
       {photoError && (
-        <div className="text-danger small mt-2">{photoError}</div>
+        <div className="alert alert-danger mt-2">{photoError}</div>
       )}
     </div>
   );
@@ -396,7 +487,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
 
   // Handle photo upload
   const handlePhotoUploaded = (url) => {
-    setPhotoPreviewUrl(url);
+    // Only update the state URL if not null or a blob URL (temp preview)
+    if (url !== null) {
+      setPhotoPreviewUrl(url);
+    }
   };
 
   // Handle form submission
@@ -484,22 +578,6 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   return (
     <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        {/* Show current photo when available */}
-        {initialData && photoPreviewUrl && (
-          <div className="mb-3">
-            <img 
-              src={photoPreviewUrl} 
-              alt="Item" 
-              style={{ 
-                width: '100%', 
-                maxHeight: 280, 
-                objectFit: 'cover', 
-                borderRadius: 12 
-              }} 
-            />
-          </div>
-        )}
-        
         {/* Category selection */}
         <div className="mb-2">
           <label className="form-label">Category</label>
@@ -546,7 +624,8 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         {initialData && initialData.id && (
           <PhotoUpload 
             initialData={initialData} 
-            onPhotoUpload={handlePhotoUploaded} 
+            onPhotoUpload={handlePhotoUploaded}
+            currentPhotoUrl={photoPreviewUrl}
           />
         )}
         

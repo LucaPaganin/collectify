@@ -91,7 +91,12 @@ const SearchPage = () => {
   
   const openEdit = item => { 
     if (isAuthenticated()) {
-      setFormData(item); 
+      // Add primary_photo_url to item data when editing using the primary_photo filename
+      const itemWithPhotoUrl = {
+        ...item,
+        primary_photo_url: item.primary_photo ? `/uploads/${item.primary_photo}` : null
+      };
+      setFormData(itemWithPhotoUrl); 
       setFormOpen(true); 
     } else {
       // Redirect to login page with return URL
@@ -109,7 +114,12 @@ const SearchPage = () => {
     if (wasCreate) {
       // Immediately open edit dialog with the newly created item
       setTimeout(() => {
-        setFormData(savedItem);
+        // Add primary_photo_url when opening for edit
+        const itemWithPhotoUrl = {
+          ...savedItem,
+          primary_photo_url: savedItem.primary_photo ? `/uploads/${savedItem.primary_photo}` : null
+        };
+        setFormData(itemWithPhotoUrl);
         setFormOpen(true);
       }, 0);
     }

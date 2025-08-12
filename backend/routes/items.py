@@ -12,15 +12,31 @@ def register_item_routes(app):
     @app.route('/api/items', methods=['GET'])
     @log_exceptions
     def get_items():
-        """Fetches a list of all items, with optional category filtering."""
+        """Fetches a list of all items, with optional search and category filtering."""
         query = Item.query.join(Item.category, isouter=True)
         
+        # Filter by category if requested
         if request.args.get('category_id'):
-            query = query.filter(Item.category_id == int(request.args.get('category_id')))
+            try:
+                category_id = int(request.args.get('category_id'))
+                query = query.filter(Item.category_id == category_id)
+                app.logger.info(f"Filtering by category_id: {category_id}")
+            except ValueError:
+                # Handle invalid category_id parameter
+                app.logger.warning(f"Invalid category_id parameter: {request.args.get('category_id')}")
+                return jsonify({'error': 'Invalid category ID format'}), 400
+        
+        # Text search if requested
+        if request.args.get('search'):
+            search_term = request.args.get('search')
+            app.logger.info(f"Searching for term: {search_term}")
+            search_pattern = f"%{search_term}%"
+            query = query.filter(Item.name.ilike(search_pattern))
         
         query = query.order_by(Item.name)
         items = [item.to_dict() for item in query.all()]
         
+        app.logger.info(f"Returning {len(items)} items")
         return jsonify(items)
 
     @app.route('/api/items/<int:id>', methods=['GET'])
