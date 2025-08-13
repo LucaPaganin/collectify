@@ -65,22 +65,67 @@ jobs:
         
         # Create a startup script that configures the application and initializes the database
         echo '#!/bin/bash
-        # Add WSGI configuration
+        # Find Python in the system
+        PYTHON_PATH=$(which python3 || which python)
+        if [ -z "$PYTHON_PATH" ]; then
+          # Try common locations in Azure
+          for path in /usr/bin/python3 /usr/bin/python /home/site/wwwroot/env/bin/python /opt/python/latest/bin/python
+          do
+            if [ -f "$path" ]; then
+              PYTHON_PATH=$path
+              break
+            fi
+          done
+        fi
+        
+        # Find pip
+        PIP_PATH=$(which pip3 || which pip)
+        if [ -z "$PIP_PATH" ]; then
+          # Try common locations
+          for path in /usr/bin/pip3 /usr/bin/pip /home/site/wwwroot/env/bin/pip
+          do
+            if [ -f "$path" ]; then
+              PIP_PATH=$path
+              break
+            fi
+          done
+        fi
+        
+        # Ensure Python is available
+        if [ -z "$PYTHON_PATH" ]; then
+          echo "Python not found. Installing Python 3..."
+          apt-get update
+          apt-get install -y python3 python3-pip
+          PYTHON_PATH=$(which python3)
+          PIP_PATH=$(which pip3)
+        fi
+        
+        echo "Using Python at: $PYTHON_PATH"
+        echo "Using pip at: $PIP_PATH"
+        
+        # Set up environment
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         export FLASK_APP=app.py
         export FLASK_ENV=production
         
-        # Initialize database first
-        python init_all_tables.py
+        # Ensure dependencies are installed
+        echo "Installing dependencies..."
+        $PIP_PATH install -r requirements.txt
         
-        # Start Gunicorn with correct path configuration
-        gunicorn --bind=0.0.0.0:$PORT --workers=4 app:app
+        # Initialize database
+        echo "Initializing database..."
+        $PYTHON_PATH init_all_tables.py
+        
+        # Start Gunicorn
+        echo "Starting Gunicorn..."
+        $PIP_PATH install gunicorn
+        $PYTHON_PATH -m gunicorn --bind=0.0.0.0:${PORT:-8000} --workers=4 app:app
         ' > deployment/startup.sh
         chmod +x deployment/startup.sh
         
         # Create a .deployment file to tell Azure how to start the app
         echo '[config]
-        command = ./startup.sh
+        command = bash ./startup.sh
         ' > deployment/.deployment
         
         # Create web.config file for Azure
@@ -88,7 +133,9 @@ jobs:
         <configuration>
           <system.webServer>
             <handlers>
-              <add name="PythonHandler" path="*" verb="*" modules="FastCgiModule" scriptProcessor="%PYTHON_PATH%|%WSGI_PATH%" resourceType="Unspecified" requireAccess="Script" />
+              <add name="PythonHandler" path="*" verb="*" modules="FastCgiModule" 
+                   scriptProcessor="/opt/hostedtoolcache/Python/3.11.13/x64/bin/python.exe|%WSGI_PATH%" 
+                   resourceType="Unspecified" requireAccess="Script" />
             </handlers>
             <rewrite>
               <rules>
@@ -188,5 +235,13 @@ jobs:
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
               "value": "0"
+            },
+            {
+              "name": "PYTHON_PATH",
+              "value": "/opt/hostedtoolcache/Python/3.11.13/x64/bin/python"
+            },
+            {
+              "name": "PATH",
+              "value": "/opt/hostedtoolcache/Python/3.11.13/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             }
           ]
