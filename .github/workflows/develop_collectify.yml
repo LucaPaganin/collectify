@@ -29,6 +29,12 @@ jobs:
         node-version: '20'
         cache: 'npm'
         cache-dependency-path: './frontend/package-lock.json'
+        
+    # Set up Azure CLI
+    - name: Set up Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     # Install backend dependencies
     - name: Install backend dependencies
@@ -114,49 +120,17 @@ jobs:
         # slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_d7b87d5b242444a9bc2ab07fa9a62a6b }}
         package: './collectify-deployment.zip'
-    
-    # Configure app settings for the web app
-    - name: Configure App Settings
-      uses: azure/appservice-settings@v1
-      with:
-        app-name: 'collectify'
-        # slot-name: 'production'
-        app-settings-json: |
-          [
-            {
-              "name": "FLASK_APP",
-              "value": "app.py"
-            },
-            {
-              "name": "FLASK_ENV",
-              "value": "production"
-            },
-            {
-              "name": "FLASK_RUN_HOST",
-              "value": "0.0.0.0"
-            },
-            {
-              "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
-              "value": "true"
-            },
-            {
-              "name": "COLLECTIFY_DB_PATH",
-              "value": "data/collectibles.db"
-            },
-            {
-              "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "0"
-            },
-            {
-              "name": "PYTHONPATH",
-              "value": "/home/site/wwwroot"
-            },
-            {
-              "name": "WEBSITE_HTTPLOGGING_RETENTION_DAYS",
-              "value": "7"
-            },
-            {
-              "name": "STARTUP_COMMAND",
-              "value": "gunicorn --bind=0.0.0.0:8000 --workers=4 app:app"
-            }
-          ]
+        
+    # Configure app settings using direct Azure CLI commands
+    - name: Configure App Settings with Azure CLI
+      run: |
+        az webapp config appsettings set --name collectify --resource-group collectify-rg --settings \
+          FLASK_APP=app.py \
+          FLASK_ENV=production \
+          FLASK_RUN_HOST=0.0.0.0 \
+          SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+          COLLECTIFY_DB_PATH=data/collectibles.db \
+          WEBSITE_RUN_FROM_PACKAGE=0 \
+          PYTHONPATH=/home/site/wwwroot \
+          WEBSITE_HTTPLOGGING_RETENTION_DAYS=7 \
+          STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --workers=4 app:app"
