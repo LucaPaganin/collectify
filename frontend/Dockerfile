@@ -1,5 +1,5 @@
 # Frontend Dockerfile for Collectify
-FROM node:20-alpine
+FROM node:20-alpine as build
 
 WORKDIR /app
 
@@ -10,9 +10,17 @@ RUN npm install --legacy-peer-deps
 # Copy frontend source code
 COPY public ./public
 COPY src ./src
+COPY .env* ./
 
-# Expose port 3000 for the dev server
-EXPOSE 3000
+# Build the production app
+RUN npm run build
 
-# Start the development server
-CMD ["npm", "start"]
+# Production environment
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80 for the production server
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

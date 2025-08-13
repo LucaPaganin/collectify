@@ -44,9 +44,11 @@ services:
     image: lucaplawliet/collectify-frontend:latest
     container_name: collectify-frontend
     ports:
-      - "3000:3000"
-    volumes:
-      - collectify-frontend-data:/app/data
+      - "80:80"
+    environment:
+      - API_URL=http://collectify-app:5000
+    depends_on:
+      - collectify-backend
 
 volumes:
   collectify-data:

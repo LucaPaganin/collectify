@@ -3,7 +3,7 @@ import createRefresh from 'react-auth-kit/createRefresh';
 
 // Create axios instance with default configuration
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.REACT_APP_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   }
