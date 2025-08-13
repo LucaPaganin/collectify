@@ -23,18 +23,19 @@ echo "Using Python at: $PYTHON_PATH"
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 export FLASK_APP=app.py
 export FLASK_ENV=production
+export PATH=$PATH:/home/.local/bin
 
 # Install pip if needed
-if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
-    echo "Installing pip..."
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-    $PYTHON_PATH get-pip.py
-    rm get-pip.py
-fi
+# if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
+#     echo "Installing pip..."
+#     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+#     $PYTHON_PATH get-pip.py
+#     rm get-pip.py
+# fi
 
-# Find pip again
-PIP_PATH=$(which pip3 || which pip)
-echo "Using pip at: $PIP_PATH"
+# # Find pip again
+# PIP_PATH=$(which pip3 || which pip)
+# echo "Using pip at: $PIP_PATH"
 
 # Install wfastcgi
 echo "Installing wfastcgi..."
@@ -56,4 +57,4 @@ $PYTHON_PATH -m pip install gunicorn
 
 # Start Gunicorn
 echo "Starting Gunicorn..."
-$PYTHON_PATH -m gunicorn --bind=0.0.0.0:${PORT:-8000} --workers=4 app:app
+$PYTHON_PATH -m gunicorn --bind=0.0.0.0:8000 --workers=4 app:app
