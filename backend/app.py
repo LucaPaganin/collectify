@@ -18,10 +18,18 @@ import sys
 # Create the Flask application
 app = create_app()
 
-# Configure CORS for API routes
-cors_origins = os.environ.get('CORS_ORIGINS', 'https://black-sea-02a411d03.3.azurestaticapps.net,http://localhost:3000').split(',')
-app.logger.info(f"Configuring CORS with allowed origins: {cors_origins}")
-CORS(app, resources={r"/api/*": {"origins": cors_origins}})
+# Configure CORS for all routes - permissive configuration
+cors_origins = os.environ.get('CORS_ORIGINS', '*')
+app.logger.info(f"Configuring permissive CORS with allowed origins: {cors_origins}")
+CORS(app, 
+     resources={r"/*": {
+         "origins": "*",
+         "allow_headers": "*",
+         "expose_headers": "*",
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+         "supports_credentials": True
+     }}, 
+     send_wildcard=True)
 
 # Configure logging
 if not app.debug:
@@ -152,6 +160,16 @@ with app.app_context():
         db.session.commit()
         app.logger.info("[DB] Default admin user created successfully")
     
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Expose-Headers', 'Content-Length,Content-Range')
+    return response
+
 # Register CLI commands
 register_commands(app)
 
