@@ -37,11 +37,6 @@ export PATH=$PATH:/home/.local/bin
 # PIP_PATH=$(which pip3 || which pip)
 # echo "Using pip at: $PIP_PATH"
 
-# Install wfastcgi
-echo "Installing wfastcgi..."
-$PYTHON_PATH -m pip install wfastcgi
-$PYTHON_PATH -m wfastcgi.install --add-to-path
-
 # Ensure dependencies are installed
 echo "Installing dependencies..."
 $PYTHON_PATH -m pip install -r requirements.txt
