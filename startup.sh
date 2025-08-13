@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# Log all commands
+# This is a one-time setup script that runs during App Service startup
+# It should NOT run the server - Azure App Service will handle that
+
+# Log all commands for debugging
 set -x
 
 # Find Python in the system
@@ -19,23 +22,11 @@ fi
 
 echo "Using Python at: $PYTHON_PATH"
 
-# Set up environment
+# Set up environment - these are only for this script, not for the app service
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 export FLASK_APP=app.py
 export FLASK_ENV=production
 export PATH=$PATH:/home/.local/bin
-
-# Install pip if needed
-# if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
-#     echo "Installing pip..."
-#     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-#     $PYTHON_PATH get-pip.py
-#     rm get-pip.py
-# fi
-
-# # Find pip again
-# PIP_PATH=$(which pip3 || which pip)
-# echo "Using pip at: $PIP_PATH"
 
 # Ensure dependencies are installed
 echo "Installing dependencies..."
@@ -46,10 +37,9 @@ echo "Initializing database..."
 mkdir -p data
 $PYTHON_PATH init_all_tables.py
 
-# Install gunicorn
+# Install gunicorn (for Azure to use)
 echo "Installing Gunicorn..."
 $PYTHON_PATH -m pip install gunicorn
 
-# Start Gunicorn
-echo "Starting Gunicorn..."
-$PYTHON_PATH -m gunicorn --bind=0.0.0.0:8000 --workers=4 app:app
+echo "Setup completed successfully. Azure App Service will now start the application."
+# Do NOT start the server here - Azure App Service will handle that
