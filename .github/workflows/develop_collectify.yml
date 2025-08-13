@@ -73,11 +73,6 @@ jobs:
         cp startup.sh deployment/
         chmod +x deployment/startup.sh
         
-        # Create a .deployment file to tell Azure how to start the app
-        echo '[config]
-        command = bash ./startup.sh
-        ' > deployment/.deployment
-        
         # Modify app.py to serve static files if needed
         if grep -q "serve_static_files" deployment/app.py; then
           echo "Static file serving already configured"
@@ -127,10 +122,17 @@ jobs:
         az webapp config appsettings set --name collectify --resource-group collectify-rg --settings \
           FLASK_APP=app.py \
           FLASK_ENV=production \
+          FLASK_DEBUG=1 \
           FLASK_RUN_HOST=0.0.0.0 \
           SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-          COLLECTIFY_DB_PATH=data/collectibles.db \
-          WEBSITE_RUN_FROM_PACKAGE=0 \
+          COLLECTIFY_DB_PATH=/home/data/collectibles.db \
+          WEBSITE_RUN_FROM_PACKAGE=1 \
           PYTHONPATH=/home/site/wwwroot \
           WEBSITE_HTTPLOGGING_RETENTION_DAYS=7 \
-          STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --workers=4 app:app"
+          STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --timeout=600 --workers=4 --log-level=debug app:app" \
+          FLASK_LOG_LEVEL=DEBUG
+    
+    # Configure Linux-specific startup command
+    - name: Configure Linux App Service startup command
+      run: |
+        az webapp config set --name collectify --resource-group collectify-rg --startup-file "startup.sh"
