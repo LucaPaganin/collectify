@@ -17,7 +17,7 @@ The frontend uses the following environment variables:
 
 - `REACT_APP_API_URL`: URL to the backend API 
   - Development: `http://localhost:5000/api`
-  - Production: `https://collectify-backend.azurewebsites.net/api`
+  - Production: `https://collectify-f7fjdrcybucva9ds.swedencentral-01.azurewebsites.net/api`
 
 ### Backend Environment Variables
 
