@@ -38,12 +38,12 @@ echo "Using pip at: $PIP_PATH"
 
 # Install wfastcgi
 echo "Installing wfastcgi..."
-$PIP_PATH install wfastcgi
+$PYTHON_PATH -m pip install wfastcgi
 $PYTHON_PATH -m wfastcgi.install --add-to-path
 
 # Ensure dependencies are installed
 echo "Installing dependencies..."
-$PIP_PATH install -r requirements.txt
+$PYTHON_PATH -m pip install -r requirements.txt
 
 # Initialize database
 echo "Initializing database..."
@@ -52,7 +52,7 @@ $PYTHON_PATH init_all_tables.py
 
 # Install gunicorn
 echo "Installing Gunicorn..."
-$PIP_PATH install gunicorn
+$PYTHON_PATH -m pip install gunicorn
 
 # Start Gunicorn
 echo "Starting Gunicorn..."
