@@ -63,17 +63,25 @@ jobs:
         # Copy built frontend to static directories
         cp -r frontend/build/* deployment/static/
         
-        # Create a startup script that configures the application
+        # Create a startup script that configures the application and initializes the database
         echo '#!/bin/bash
         # Add WSGI configuration
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         export FLASK_APP=app.py
         export FLASK_ENV=production
         
+        # Initialize database first
+        python init_all_tables.py
+        
         # Start Gunicorn with correct path configuration
         gunicorn --bind=0.0.0.0:$PORT --workers=4 app:app
         ' > deployment/startup.sh
         chmod +x deployment/startup.sh
+        
+        # Create a .deployment file to tell Azure how to start the app
+        echo '[config]
+        command = ./startup.sh
+        ' > deployment/.deployment
         
         # Create web.config file for Azure
         echo '<?xml version="1.0" encoding="utf-8"?>
@@ -176,14 +184,9 @@ jobs:
             {
               "name": "COLLECTIFY_DB_PATH",
               "value": "data/collectibles.db"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "0"
             }
           ]
-
-    # Initialize database after deployment
-    - name: Run database initialization
-      uses: azure/webapps-action@v1
-      with:
-        app-name: 'collectify'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_d7b87d5b242444a9bc2ab07fa9a62a6b }}
-        startup-command: 'python init_all_tables.py'
