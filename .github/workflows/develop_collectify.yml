@@ -111,7 +111,7 @@ jobs:
       uses: azure/webapps-deploy@v2
       with:
         app-name: 'collectify'
-        slot-name: 'production'
+        # slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_d7b87d5b242444a9bc2ab07fa9a62a6b }}
         package: './collectify-deployment.zip'
     
@@ -120,7 +120,7 @@ jobs:
       uses: azure/appservice-settings@v1
       with:
         app-name: 'collectify'
-        slot-name: 'production'
+        # slot-name: 'production'
         app-settings-json: |
           [
             {
