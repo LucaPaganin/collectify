@@ -61,11 +61,6 @@ const AdminPage = () => {
   // Drag and drop state for specification reordering
   const [draggedSpecIndex, setDraggedSpecIndex] = useState(null);
 
-  // Fetch categories on component mount
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
   // Fetch categories from API
   const fetchCategories = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
@@ -82,6 +77,11 @@ const AdminPage = () => {
       setState(prev => ({ ...prev, loading: false }));
     }
   }, []);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Fetch specifications schema for a category
   const fetchSpecificationsSchema = async (categoryId, categoryName) => {
