@@ -15,7 +15,7 @@ services:
     restart: "no"
     entrypoint: ["python", "init_all_tables.py"]
 
-  collectify-backend:
+  collectify-web:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -48,7 +48,7 @@ services:
     environment:
       - API_URL=http://collectify-app:5000
     depends_on:
-      - collectify-backend
+      - collectify-web
 
 volumes:
   collectify-data:

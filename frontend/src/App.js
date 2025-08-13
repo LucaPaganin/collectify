@@ -23,11 +23,12 @@ setupAuthInterceptor(() => {
   // Access the token correctly from the auth state
   let token;
   const authVal = authStore.tokenObject.value;
+  console.log(`authVal: ${JSON.stringify(authVal)}`);
   if (authVal.isSignIn){
     token = authVal.auth.token;
   }
   else if (authVal.isUsingRefreshToken) {
-    token = authVal.refresh.token;
+    token = authVal.refresh?.token;
   }
   return token || null;
 });
