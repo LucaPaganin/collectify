@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { api } from '../utils/authUtils'; // Import the configured api
 import useSignOut from 'react-auth-kit/hooks/useSignOut';
 import useAuthUser from 'react-auth-kit/hooks/useAuthUser';
@@ -65,10 +64,10 @@ const AdminPage = () => {
   // Fetch categories on component mount
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   // Fetch categories from API
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }));
     
     try {
@@ -82,7 +81,7 @@ const AdminPage = () => {
       showSnackbar('Error fetching categories: ' + (error.response?.data?.error || error.message), 'error');
       setState(prev => ({ ...prev, loading: false }));
     }
-  };
+  }, []);
 
   // Fetch specifications schema for a category
   const fetchSpecificationsSchema = async (categoryId, categoryName) => {
@@ -376,6 +375,8 @@ const AdminPage = () => {
     }
   };
   
+  // These functions are kept as comments for future reference if needed
+  /*
   // Handle changes to a specification field option
   const handleSpecOptionChange = (specIndex, optionIndex, value) => {
     setState(prev => {
@@ -450,6 +451,7 @@ const AdminPage = () => {
       };
     });
   };
+  */
 
   // Handle logout
   const handleLogout = () => {

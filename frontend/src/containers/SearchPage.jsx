@@ -7,7 +7,6 @@ import styles from './SearchPage.module.css';
 
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { cancellableGet, debounce } from '../utils/apiUtils';
-import { api } from '../utils/authUtils';
 
 const SearchPage = () => {
   const [query, setQuery] = useState('');
@@ -26,10 +25,10 @@ const SearchPage = () => {
   
   // Cleanup function to cancel pending requests on unmount
   useEffect(() => {
-    // Return a cleanup function that uses the current value of the ref
+    const timeoutId = searchTimeoutRef.current;
+    
+    // Return a cleanup function 
     return () => {
-      // This will be called when component unmounts
-      const timeoutId = searchTimeoutRef.current;
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
