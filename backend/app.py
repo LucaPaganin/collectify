@@ -12,10 +12,16 @@ from routes.auth import auth_bp
 from routes.admin_init import register_routes as register_admin_init_routes
 from flask_cli import register_commands
 from flask import send_from_directory, abort
+from flask_cors import CORS
 import sys
 
 # Create the Flask application
 app = create_app()
+
+# Configure CORS for API routes
+cors_origins = os.environ.get('CORS_ORIGINS', 'https://black-sea-02a411d03.3.azurestaticapps.net,http://localhost:3000').split(',')
+app.logger.info(f"Configuring CORS with allowed origins: {cors_origins}")
+CORS(app, resources={r"/api/*": {"origins": cors_origins}})
 
 # Configure logging
 if not app.debug:

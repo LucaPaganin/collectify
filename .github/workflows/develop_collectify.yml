@@ -21,14 +21,6 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-
-    # Set up Node.js for frontend
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: './frontend/package-lock.json'
         
     # Set up Azure CLI
     - name: Set up Azure CLI
@@ -43,15 +35,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Install frontend dependencies and build frontend
-    - name: Install frontend dependencies and build
-      run: |
-        cd frontend
-        npm ci
-        # Create a production .env file with the correct API URL
-        echo "REACT_APP_API_URL=/api" > .env.production
-        npm run build
-
     # Create deployment package
     - name: Create deployment package
       run: |
@@ -61,41 +44,9 @@ jobs:
         # Copy backend files to deployment
         cp -r backend/* deployment/
         
-        # Create static directories for frontend static files
-        mkdir -p deployment/static/js
-        mkdir -p deployment/static/css
-        mkdir -p deployment/static/media
-        
-        # Copy built frontend to static directories
-        cp -r frontend/build/* deployment/static/
-        
         # Copy the startup script
         cp startup.sh deployment/
         chmod +x deployment/startup.sh
-        
-        # Modify app.py to serve static files if needed
-        if grep -q "serve_static_files" deployment/app.py; then
-          echo "Static file serving already configured"
-        else
-          # Append static file serving configuration to app.py
-          echo "
-        # Configure Flask to serve static files
-        @app.route('/', defaults={'path': ''})
-        @app.route('/<path:path>')
-        def serve_static_files(path):
-            if path.startswith('api/'):
-                # Let Flask handle API routes
-                return abort(404)
-            
-            # Check if file exists in static folder
-            static_path = os.path.join(app.static_folder, path)
-            if os.path.exists(static_path) and os.path.isfile(static_path):
-                return send_from_directory(app.static_folder, path)
-            
-            # Serve index.html for all other routes (SPA support)
-            return send_from_directory(app.static_folder, 'index.html')
-        " >> deployment/app.py
-        fi
         
         # Remove unnecessary files
         find deployment -type d -name "__pycache__" -exec rm -rf {} +
@@ -130,7 +81,9 @@ jobs:
           PYTHONPATH=/home/site/wwwroot \
           WEBSITE_HTTPLOGGING_RETENTION_DAYS=7 \
           STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --timeout=600 --workers=4 --log-level=debug app:app" \
-          FLASK_LOG_LEVEL=DEBUG
+          FLASK_LOG_LEVEL=DEBUG \
+          CORS_ORIGINS="https://black-sea-02a411d03.3.azurestaticapps.net,http://localhost:3000" \
+          JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
     
     # Configure Linux-specific startup command
     - name: Configure Linux App Service startup command

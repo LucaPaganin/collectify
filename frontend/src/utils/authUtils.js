@@ -1,9 +1,10 @@
 import axios from 'axios';
 import createRefresh from 'react-auth-kit/createRefresh';
+import config from '../config';
 
 // Create axios instance with default configuration
 export const api = axios.create({
-  baseURL: '/api',  // Always use relative path in production
+  baseURL: config.apiUrl,  // Get API URL from config
   headers: {
     'Content-Type': 'application/json',
   }
