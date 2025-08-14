@@ -63,7 +63,7 @@ const SearchPage = () => {
     const load = async () => {
       try {
         console.log('Loading categories...');
-        const res = await api.get('/api/categories');
+        const res = await api.get('/categories');
         console.log('Categories response:', res);
         setCategoriesList(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
