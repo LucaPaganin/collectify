@@ -47,6 +47,31 @@ cd "$APP_DIR"
 export FLASK_APP=app.py
 export FLASK_ENV=production
 
+# Run database migrations
+echo "Running database migrations..."
+if [ -d "backend" ]; then
+    cd backend
+fi
+
+# Initialize tables if needed
+echo "Running init_all_tables.py..."
+$PYTHON_PATH init_all_tables.py
+
+# Run migrations
+echo "Running migrate_users.py..."
+$PYTHON_PATH migrate_users.py
+
+echo "Running migrate_specifications.py..."
+$PYTHON_PATH migrate_specifications.py
+
+echo "Running migrate_category_timestamps.py..."
+$PYTHON_PATH migrate_category_timestamps.py
+
+# Go back to app directory if we moved to backend
+if [ "$(basename $(pwd))" = "backend" ]; then
+    cd ..
+fi
+
 # Check for gunicorn
 if command -v gunicorn &> /dev/null; then
     echo "Running with gunicorn..."

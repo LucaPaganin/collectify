@@ -6,14 +6,12 @@ services:
       dockerfile: Dockerfile.initdb
     image: lucaplawliet/collectify-initdb:latest
     container_name: collectify-initdb
-    environment:
-      - COLLECTIFY_DB_PATH=/app/data/collectibles.db
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=password
     volumes:
       - collectify-data:/app/data
     restart: "no"
     entrypoint: ["python", "init_all_tables.py"]
+    env_file:
+      - .env
 
   collectify-web:
     build:
@@ -25,18 +23,13 @@ services:
       - "5000:5000"
     volumes:
       - collectify-data:/app/data
-    environment:
-      - FLASK_APP=app.py
-      - FLASK_DEBUG=1
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=5000
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=password
     depends_on:
       collectify-initdb:
         condition: service_completed_successfully
     restart: always
     entrypoint: ["/startup.sh"]
+    env_file:
+      - .env
 
   collectify-frontend:
     build:
@@ -47,7 +40,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - API_URL=http://collectify-app:5000
+      - REACT_APP_API_URL=http://collectify-app:5000
     depends_on:
       - collectify-web
 

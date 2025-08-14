@@ -9,5 +9,16 @@ COPY ./ /app/
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Entrypoint: run the DB initialization script
-ENTRYPOINT ["python", "init_all_tables.py"]
+# Create a wrapper script that runs all migrations
+RUN echo '#!/bin/bash\n\
+python init_all_tables.py\n\
+python migrate_users.py\n\
+python migrate_specifications.py\n\
+python migrate_category_timestamps.py\n\
+' > /app/run_all_migrations.sh
+
+# Make the script executable
+RUN chmod +x /app/run_all_migrations.sh
+
+# Entrypoint: run the DB initialization and migration scripts
+ENTRYPOINT ["/bin/bash", "/app/run_all_migrations.sh"]

@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the project
 COPY . .
 
+# Make migrate_category_timestamps.py executable
+RUN chmod +x migrate_category_timestamps.py
+
 # Copy startup script and make it executable
 COPY startup.sh /startup.sh
 RUN chmod +x /startup.sh
