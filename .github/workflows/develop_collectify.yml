@@ -88,4 +88,4 @@ jobs:
     # Configure Linux-specific startup command
     - name: Configure Linux App Service startup command
       run: |
-        az webapp config set --name collectify --resource-group collectify-rg --startup-file "startup.sh"
+        az webapp config set --name collectify --resource-group collectify --startup-file "startup.sh"
