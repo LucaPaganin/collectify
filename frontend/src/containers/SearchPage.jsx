@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import styles from './SearchPage.module.css';
 
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
-import { cancellableGet, debounce } from '../utils/apiUtils';
+import { debounce } from '../utils/apiUtils';
 import { api } from '../utils/authUtils';
 
 const SearchPage = () => {
