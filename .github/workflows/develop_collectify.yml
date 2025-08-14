@@ -70,7 +70,7 @@ jobs:
     #Configure app settings using direct Azure CLI commands
     - name: Configure App Settings with Azure CLI
       run: |
-        az webapp config appsettings set --name collectify --resource-group collectify-rg --settings \
+        az webapp config appsettings set --name collectify --resource-group collectify --settings \
           FLASK_APP=app.py \
           FLASK_ENV=production \
           FLASK_DEBUG=1 \
