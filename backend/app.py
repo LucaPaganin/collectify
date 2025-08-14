@@ -163,7 +163,7 @@ with app.app_context():
 # Add CORS headers to all responses
 @app.after_request
 def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Origin', 'https://black-sea-02a411d03.2.azurestaticapps.net')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
