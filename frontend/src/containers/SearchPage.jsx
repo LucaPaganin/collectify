@@ -36,6 +36,28 @@ const SearchPage = () => {
     };
   }, []);
 
+  // Debounced search function to prevent multiple API calls
+  const search = useCallback(async () => {
+    setHasSearched(true);
+    
+    try {
+      const params = new URLSearchParams();
+      if (query) params.set('search', query);
+      if (category) params.set('category_id', category);
+      const qs = params.toString();
+      const url = `/api/items${qs ? `?${qs}` : ''}`;
+      
+      console.log(`Searching with URL: ${url}`);
+      const res = await api.get(url);
+      console.log('Search results:', res.data);
+      setResults(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Search error:', err);
+      // Error is already logged in the utility
+      setResults([]);
+    }
+  }, [query, category]);
+
   // Load categories for the filter dropdown
   useEffect(() => {
     const load = async () => {
@@ -65,28 +87,6 @@ const SearchPage = () => {
     
     // Axios will automatically handle request cleanup
   }, [search]);
-
-  // Debounced search function to prevent multiple API calls
-  const search = useCallback(async () => {
-    setHasSearched(true);
-    
-    try {
-      const params = new URLSearchParams();
-      if (query) params.set('search', query);
-      if (category) params.set('category_id', category);
-      const qs = params.toString();
-      const url = `/api/items${qs ? `?${qs}` : ''}`;
-      
-      console.log(`Searching with URL: ${url}`);
-      const res = await api.get(url);
-      console.log('Search results:', res.data);
-      setResults(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Search error:', err);
-      // Error is already logged in the utility
-      setResults([]);
-    }
-  }, [query, category]);
 
   // Create a debounced version of the search function
   const debouncedSearch = useCallback(
