@@ -23,7 +23,7 @@ cors_origins = os.environ.get('CORS_ORIGINS', '*')
 app.logger.info(f"Configuring permissive CORS with allowed origins: {cors_origins}")
 CORS(app, 
      resources={r"/*": {
-         "origins": "*",
+         "origins": cors_origins,
          "allow_headers": "*",
          "expose_headers": "*",
          "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
