@@ -387,15 +387,47 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
 
   // Initialize form with initialData when available
   useEffect(() => {
-    if (initialData) {
-      setForm({
-        name: initialData.name || '',
-        category_id: initialData.category_id || '',
-        specs: initialData.specs || {},
-      });
-      setPhotoPreviewUrl(initialData.primary_photo_url || null);
+    if (initialData && show) {
+      // Fetch the latest item data from the API when editing (if we have an ID)
+      if (initialData.id) {
+        const fetchItemData = async () => {
+          try {
+            const response = await api.get(`/items/${initialData.id}`);
+            const itemData = response.data;
+            
+            // Extract specification values from the response
+            const specValues = itemData.specification_values || {};
+            
+            setForm({
+              name: itemData.name || '',
+              category_id: itemData.category_id || '',
+              specs: specValues,
+            });
+            setPhotoPreviewUrl(itemData.primary_photo ? `/uploads/${itemData.primary_photo}` : initialData.primary_photo_url);
+          } catch (error) {
+            console.error('Error fetching item data:', error);
+            // Fallback to initialData if API request fails
+            setForm({
+              name: initialData.name || '',
+              category_id: initialData.category_id || '',
+              specs: initialData.specification_values || {},
+            });
+            setPhotoPreviewUrl(initialData.primary_photo_url || null);
+          }
+        };
+        
+        fetchItemData();
+      } else {
+        // For new items, just use the initialData
+        setForm({
+          name: initialData.name || '',
+          category_id: initialData.category_id || '',
+          specs: initialData.specification_values || {},
+        });
+        setPhotoPreviewUrl(initialData.primary_photo_url || null);
+      }
     }
-  }, [initialData]);
+  }, [initialData, show]);
 
   // Reset form on each open
   useEffect(() => {
@@ -403,14 +435,9 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       setError(null);
       setAuthInProgress(false);
       
-      if (initialData) {
-        setForm({
-          name: initialData.name || '',
-          category_id: initialData.category_id || '',
-          specs: initialData.specs || {},
-        });
-        setPhotoPreviewUrl(initialData.primary_photo_url || null);
-      } else {
+      // Only initialize empty form when no initialData is provided
+      // This avoids conflicts with the other useEffect that fetches data
+      if (!initialData) {
         setForm({ name: '', category_id: '', specs: {} });
         setPhotoPreviewUrl(null);
       }

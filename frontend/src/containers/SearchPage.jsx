@@ -116,15 +116,31 @@ const SearchPage = () => {
     }
   };
   
-  const openEdit = item => { 
+  const openEdit = async (item) => { 
     if (isAuthenticated()) {
-      // Add primary_photo_url to item data when editing using the primary_photo filename
-      const itemWithPhotoUrl = {
-        ...item,
-        primary_photo_url: item.primary_photo ? `/uploads/${item.primary_photo}` : null
-      };
-      setFormData(itemWithPhotoUrl); 
-      setFormOpen(true); 
+      try {
+        // Get the full item details from the API
+        const response = await api.get(`/items/${item.id}`);
+        const fullItemData = response.data;
+        
+        // Add primary_photo_url to item data when editing using the primary_photo filename
+        const itemWithPhotoUrl = {
+          ...fullItemData,
+          primary_photo_url: fullItemData.primary_photo ? `/uploads/${fullItemData.primary_photo}` : null
+        };
+        
+        setFormData(itemWithPhotoUrl); 
+        setFormOpen(true);
+      } catch (error) {
+        console.error('Error fetching item details:', error);
+        // Fallback to basic data if API call fails
+        const itemWithPhotoUrl = {
+          ...item,
+          primary_photo_url: item.primary_photo ? `/uploads/${item.primary_photo}` : null
+        };
+        setFormData(itemWithPhotoUrl); 
+        setFormOpen(true);
+      }
     } else {
       // Redirect to login page with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
