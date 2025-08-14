@@ -6,6 +6,8 @@
 # Log all commands for debugging
 set -x
 
+echo "Starting Collectify application in Azure App Service..."
+
 # Find Python in the system
 echo "Looking for Python..."
 PYTHON_PATH=$(which python3 || which python)
@@ -26,41 +28,30 @@ echo "Using Python at: $PYTHON_PATH"
 echo "PYTHONPATH: $PYTHONPATH"
 echo "HOME: $HOME"
 echo "PATH: $PATH"
+echo "Current directory: $(pwd)"
+echo "Directory contents: $(ls -la)"
 
-# Set up environment
-export PYTHONPATH=$PYTHONPATH:/home/site/wwwroot
-export FLASK_APP=app.py
-export FLASK_ENV=production
-export FLASK_DEBUG=1
-export PATH=$PATH:/home/.local/bin
-
-# Show the current directory structure
-echo "Printing site directory structure..."
-find /home/site -type d | sort
-
-# Check if we're running from package
-if [ "$WEBSITE_RUN_FROM_PACKAGE" == "1" ]; then
-    echo "Running from package mode detected (WEBSITE_RUN_FROM_PACKAGE=1)"
-    echo "App files are in the wwwroot directory, but not directly accessible:"
-    ls -la /home/site/wwwroot || echo "Cannot list wwwroot"
+# Locate app directory
+if [ -d "/app" ]; then
+    APP_DIR="/app"
+elif [ -d "/home/site/wwwroot" ]; then
+    APP_DIR="/home/site/wwwroot"
 else
-    echo "Standard deployment mode detected"
-    echo "App directory contents:"
-    ls -la || echo "Cannot list current directory"
+    APP_DIR="$(pwd)"
 fi
 
-# Ensure dependencies are installed
-echo "Installing dependencies..."
-$PYTHON_PATH -m pip install --upgrade pip
-$PYTHON_PATH -m pip install -r requirements.txt
-$PYTHON_PATH -m pip install gunicorn
+echo "Using app directory: $APP_DIR"
+cd "$APP_DIR"
 
-# Initialize database
-echo "Initializing database..."
-mkdir -p /home/data
-touch /home/data/collectibles.db
-export COLLECTIFY_DB_PATH=/home/data/collectibles.db
-$PYTHON_PATH init_all_tables.py || echo "Failed to initialize database, but continuing..."
+# Set up environment
+export FLASK_APP=app.py
+export FLASK_ENV=production
 
-echo "Setup completed successfully. Azure App Service will now start the application."
-# Do NOT start the server here - Azure App Service will handle that
+# Check for gunicorn
+if command -v gunicorn &> /dev/null; then
+    echo "Running with gunicorn..."
+    gunicorn --bind=0.0.0.0:5000 app:app
+else
+    echo "Running with Flask development server..."
+    python app.py
+fi

@@ -45,7 +45,7 @@ jobs:
         cp -r backend/* deployment/
         
         # Copy the startup script
-        cp startup.sh deployment/
+        cp backend/startup.sh deployment/
         chmod +x deployment/startup.sh
         
         # Remove unnecessary files

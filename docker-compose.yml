@@ -36,6 +36,7 @@ services:
       collectify-initdb:
         condition: service_completed_successfully
     restart: always
+    entrypoint: ["/startup.sh"]
 
   collectify-frontend:
     build:
