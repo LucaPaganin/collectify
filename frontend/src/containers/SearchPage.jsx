@@ -6,7 +6,6 @@ import Navbar from '../components/Navbar';
 import styles from './SearchPage.module.css';
 
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
-import { debounce } from '../utils/apiUtils';
 import { api } from '../utils/authUtils';
 
 const SearchPage = () => {
@@ -26,10 +25,13 @@ const SearchPage = () => {
   
   // Cleanup function for any pending operations
   useEffect(() => {
+    // Store ref value in a variable to use in cleanup
+    const currentTimeoutRef = searchTimeoutRef.current;
+    
     return () => {
-      // Clear any pending search timeouts
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+      // Clear any pending search timeouts using the captured value
+      if (currentTimeoutRef) {
+        clearTimeout(currentTimeoutRef);
       }
     };
   }, []);
@@ -62,7 +64,7 @@ const SearchPage = () => {
     }
     
     // Axios will automatically handle request cleanup
-  }, []);
+  }, [search]);
 
   // Debounced search function to prevent multiple API calls
   const search = useCallback(async () => {
@@ -88,9 +90,18 @@ const SearchPage = () => {
 
   // Create a debounced version of the search function
   const debouncedSearch = useCallback(
-    debounce(() => {
-      search();
-    }, 500),
+    () => {
+      const handler = setTimeout(() => {
+        search();
+      }, 500);
+      
+      // Store the timeout ID so it can be cleared if needed
+      searchTimeoutRef.current = handler;
+      
+      return () => {
+        clearTimeout(handler);
+      };
+    },
     [search]
   );
 
@@ -163,8 +174,8 @@ const SearchPage = () => {
               value={query}
               onChange={e => {
                 setQuery(e.target.value);
-                // Use timeout to ensure the state is updated before search is triggered
-                setTimeout(() => debouncedSearch(), 0);
+                // Call our debounced search function
+                debouncedSearch();
               }}
             />
             <select 
@@ -172,8 +183,8 @@ const SearchPage = () => {
               value={category} 
               onChange={e => {
                 setCategory(e.target.value);
-                // Use timeout to ensure the state is updated before search is triggered
-                setTimeout(() => debouncedSearch(), 0);
+                // Call our debounced search function
+                debouncedSearch();
               }}
             >
               <option value="">All Categories</option>
