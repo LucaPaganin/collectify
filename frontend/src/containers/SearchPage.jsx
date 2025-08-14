@@ -7,6 +7,7 @@ import styles from './SearchPage.module.css';
 
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { cancellableGet, debounce } from '../utils/apiUtils';
+import { api } from '../utils/authUtils';
 
 const SearchPage = () => {
   const [query, setQuery] = useState('');
@@ -23,14 +24,12 @@ const SearchPage = () => {
   const navigate = useNavigate();
   const isAuthenticated = useIsAuthenticated();
   
-  // Cleanup function to cancel pending requests on unmount
+  // Cleanup function for any pending operations
   useEffect(() => {
-    const timeoutId = searchTimeoutRef.current;
-    
-    // Return a cleanup function 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      // Clear any pending search timeouts
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
     };
   }, []);
@@ -39,15 +38,30 @@ const SearchPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await cancellableGet('/categories', 'searchPageCategories');
+        console.log('Loading categories...');
+        const res = await api.get('/api/categories');
+        console.log('Categories response:', res);
         setCategoriesList(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
+        console.error('Error loading categories:', e);
         // Ignore, dropdown will stay with default option
         setCategoriesList([]);
       }
     };
     load();
-    // No cleanup needed; cancellableGet handles prior-request cancellation by ID
+    
+    // Load initial search results if URL has search params
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlQuery = urlParams.get('search');
+    const urlCategory = urlParams.get('category_id');
+    
+    if (urlQuery || urlCategory) {
+      setQuery(urlQuery || '');
+      setCategory(urlCategory || '');
+      setTimeout(() => search(), 100);
+    }
+    
+    // Axios will automatically handle request cleanup
   }, []);
 
   // Debounced search function to prevent multiple API calls
@@ -59,23 +73,26 @@ const SearchPage = () => {
       if (query) params.set('search', query);
       if (category) params.set('category_id', category);
       const qs = params.toString();
-      const res = await cancellableGet(
-        `/items${qs ? `?${qs}` : ''}`,
-        'searchItems'
-      );
-      setResults(res.data);
+      const url = `/api/items${qs ? `?${qs}` : ''}`;
+      
+      console.log(`Searching with URL: ${url}`);
+      const res = await api.get(url);
+      console.log('Search results:', res.data);
+      setResults(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
+      console.error('Search error:', err);
       // Error is already logged in the utility
       setResults([]);
     }
   }, [query, category]);
 
   // Create a debounced version of the search function
-  const debouncedSearch = useRef(
+  const debouncedSearch = useCallback(
     debounce(() => {
       search();
-    }, 500)
-  ).current;
+    }, 500),
+    [search]
+  );
 
   const openNew = () => { 
     if (isAuthenticated()) {
@@ -146,7 +163,8 @@ const SearchPage = () => {
               value={query}
               onChange={e => {
                 setQuery(e.target.value);
-                debouncedSearch();
+                // Use timeout to ensure the state is updated before search is triggered
+                setTimeout(() => debouncedSearch(), 0);
               }}
             />
             <select 
@@ -154,7 +172,8 @@ const SearchPage = () => {
               value={category} 
               onChange={e => {
                 setCategory(e.target.value);
-                debouncedSearch();
+                // Use timeout to ensure the state is updated before search is triggered
+                setTimeout(() => debouncedSearch(), 0);
               }}
             >
               <option value="">All Categories</option>

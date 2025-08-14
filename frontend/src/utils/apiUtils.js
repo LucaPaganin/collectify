@@ -27,6 +27,7 @@ export const cancellableGet = async (url, requestId, config = {}) => {
   requestCancelers.set(requestId, controller);
   
   try {
+    console.log(`[API] Making GET request to: ${url}`);
     // Make the request with the signal
     const response = await authApi.get(url, {
       ...config,
@@ -35,14 +36,17 @@ export const cancellableGet = async (url, requestId, config = {}) => {
     
     // Clean up after successful request
     requestCancelers.delete(requestId);
+    console.log(`[API] Response from ${url}:`, response);
     
     return response;
   } catch (error) {
     // Only rethrow if not a cancellation
     if (!axios.isCancel(error)) {
+      console.error(`[API] Error in request to ${url}:`, error);
       requestCancelers.delete(requestId);
       throw error;
     }
+    console.log(`[API] Request to ${url} was cancelled`);
     // Return a cancelled promise
     return Promise.reject(new axios.Cancel('Request was cancelled'));
   }

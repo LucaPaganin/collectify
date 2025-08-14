@@ -68,24 +68,24 @@ jobs:
         package: './collectify-deployment.zip'
         
     # Configure app settings using direct Azure CLI commands
-    - name: Configure App Settings with Azure CLI
-      run: |
-        az webapp config appsettings set --name collectify --resource-group collectify-rg --settings \
-          FLASK_APP=app.py \
-          FLASK_ENV=production \
-          FLASK_DEBUG=1 \
-          FLASK_RUN_HOST=0.0.0.0 \
-          SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-          COLLECTIFY_DB_PATH=/home/data/collectibles.db \
-          WEBSITE_RUN_FROM_PACKAGE=1 \
-          PYTHONPATH=/home/site/wwwroot \
-          WEBSITE_HTTPLOGGING_RETENTION_DAYS=7 \
-          STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --timeout=600 --workers=4 --log-level=debug app:app" \
-          FLASK_LOG_LEVEL=DEBUG \
-          CORS_ORIGINS="https://black-sea-02a411d03.3.azurestaticapps.net,http://localhost:3000" \
-          JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
+    # - name: Configure App Settings with Azure CLI
+    #   run: |
+    #     az webapp config appsettings set --name collectify --resource-group collectify-rg --settings \
+    #       FLASK_APP=app.py \
+    #       FLASK_ENV=production \
+    #       FLASK_DEBUG=1 \
+    #       FLASK_RUN_HOST=0.0.0.0 \
+    #       SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+    #       COLLECTIFY_DB_PATH=/home/data/collectibles.db \
+    #       WEBSITE_RUN_FROM_PACKAGE=1 \
+    #       PYTHONPATH=/home/site/wwwroot \
+    #       WEBSITE_HTTPLOGGING_RETENTION_DAYS=7 \
+    #       STARTUP_COMMAND="gunicorn --bind=0.0.0.0:8000 --timeout=600 --workers=4 --log-level=debug app:app" \
+    #       FLASK_LOG_LEVEL=DEBUG \
+    #       CORS_ORIGINS="https://black-sea-02a411d03.3.azurestaticapps.net,http://localhost:3000" \
+    #       JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
     
-    # Configure Linux-specific startup command
-    - name: Configure Linux App Service startup command
-      run: |
-        az webapp config set --name collectify --resource-group collectify-rg --startup-file "startup.sh"
+    # # Configure Linux-specific startup command
+    # - name: Configure Linux App Service startup command
+    #   run: |
+    #     az webapp config set --name collectify --resource-group collectify-rg --startup-file "startup.sh"

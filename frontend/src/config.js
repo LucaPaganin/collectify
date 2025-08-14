@@ -5,11 +5,14 @@
 // Get the environment variables with fallbacks for development
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+// Clean the API URL to ensure it doesn't have trailing slashes
+const cleanApiUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
 // Export configuration object
 const config = {
   // API base URL - in development this will be the local server
   // in production, this will be configured through environment variables
-  apiUrl: API_URL,
+  apiUrl: cleanApiUrl,
   
   // Version info
   version: process.env.REACT_APP_VERSION || '0.1.0',
@@ -19,5 +22,7 @@ const config = {
     enableDebugLogging: process.env.NODE_ENV === 'development',
   }
 };
+
+console.log('Application config:', config);
 
 export default config;
