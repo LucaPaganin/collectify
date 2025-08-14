@@ -45,7 +45,7 @@ const SearchPage = () => {
       if (query) params.set('search', query);
       if (category) params.set('category_id', category);
       const qs = params.toString();
-      const url = `/api/items${qs ? `?${qs}` : ''}`;
+      const url = `/items${qs ? `?${qs}` : ''}`;
       
       console.log(`Searching with URL: ${url}`);
       const res = await api.get(url);
