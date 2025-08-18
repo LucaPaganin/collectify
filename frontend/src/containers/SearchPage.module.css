@@ -23,7 +23,7 @@
   text-align: center;
   color: #2d3748;
 }
-.searchForm {
+.searchForm, .addForm {
   display: flex;
   gap: 12px;
   margin-bottom: 0;
@@ -45,8 +45,24 @@
   font-weight: 500;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   transition: background 0.2s;
+  min-width: 100px;
 }
 .searchBtn:hover, .searchBtn:focus {
+  background: #005be6 !important;
+  color: #fff !important;
+}
+.addBtn {
+  flex: 0;
+  border-radius: 8px !important;
+  background: #0074ff !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: background 0.2s;
+  min-width: 100px;
+}
+.addBtn:hover, .addBtn:focus {
   background: #005be6 !important;
   color: #fff !important;
 }

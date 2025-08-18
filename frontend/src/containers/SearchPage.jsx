@@ -8,16 +8,157 @@ import styles from './SearchPage.module.css';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
 
+// SearchPanel component
+const SearchPanel = ({ 
+  query, 
+  setQuery, 
+  category, 
+  setCategory, 
+  categoriesList, 
+  debouncedSearch, 
+  search 
+}) => {
+  return (
+    <div className={styles.searchCard}>
+      <div className={styles.searchTitle}>Search an item</div>
+      <form 
+        className={styles.searchForm} 
+        onSubmit={e => { 
+          e.preventDefault();
+          search(); // Explicit search on submit
+        }}
+      >
+        <input
+          type="text"
+          className={`form-control ${styles.searchInput}`}
+          placeholder="Enter search string"
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value);
+            // Call our debounced search function
+            debouncedSearch();
+          }}
+        />
+        <select 
+          className={`form-select ${styles.searchSelect}`} 
+          value={category} 
+          onChange={e => {
+            setCategory(e.target.value);
+            // Call our debounced search function
+            debouncedSearch();
+          }}
+        >
+          <option value="">Select Category</option>
+          {categoriesList.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <Button className={styles.searchBtn} onClick={() => search()}>
+          Search
+        </Button>
+      </form>
+    </div>
+  );
+};
+
+// AddItemPanel component
+const AddItemPanel = ({ 
+  newItemName, 
+  setNewItemName, 
+  newItemCategory, 
+  setNewItemCategory, 
+  categoriesList, 
+  openNew 
+}) => {
+  return (
+    <div className={styles.searchCard}>
+      <div className={styles.searchTitle}>Add an item</div>
+      <form className={styles.addForm} onSubmit={openNew}>
+        <input
+          type="text"
+          className={`form-control ${styles.searchInput}`}
+          placeholder="Enter new item name"
+          value={newItemName}
+          onChange={e => setNewItemName(e.target.value)}
+          required
+        />
+        <select 
+          className={`form-select ${styles.searchSelect}`}
+          value={newItemCategory}
+          onChange={e => setNewItemCategory(e.target.value)}
+          required
+        >
+          <option value="">Select Category</option>
+          {categoriesList.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <Button 
+          className={styles.addBtn} 
+          type="submit"
+        >
+          ADD
+        </Button>
+      </form>
+    </div>
+  );
+};
+
+// SearchResults component
+const SearchResults = ({ results, isAuthenticated, openEdit }) => {
+  return (
+    <div className={styles.resultsSection}>
+      {results.length === 0 ? (
+        <div className={styles.noResults}>No results</div>
+      ) : (
+        <ul className="list-group">
+          {results.map(item => (
+            <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center">
+              <span>{item.name}</span>
+              <div>
+                {isAuthenticated() && (
+                  <Button variant="link" onClick={() => openEdit(item)}>Edit</Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// ItemFormModal component
+const ItemFormModal = ({ formOpen, formData, setFormOpen, handleSave }) => {
+  if (!formOpen) return null;
+  
+  return (
+    <ItemForm
+      show={formOpen}
+      initialData={formData}
+      onClose={() => setFormOpen(false)}
+      onSave={handleSave}
+    />
+  );
+};
+
 const SearchPage = () => {
+  // Search form state
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [categoriesList, setCategoriesList] = useState([]);
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  // Add form state
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('');
+  
+  // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState(null);
-  const searchTimeoutRef = useRef(null);
   
+  const searchTimeoutRef = useRef(null);
   
   // Navigation and auth
   const navigate = useNavigate();
@@ -105,10 +246,23 @@ const SearchPage = () => {
     [search]
   );
 
-  const openNew = () => { 
+  const openNew = (e) => {
+    e.preventDefault();
+    
     if (isAuthenticated()) {
-      setFormData(null); 
-      setFormOpen(true); 
+      // Create initial data from the add form fields if provided
+      const initialData = newItemName ? {
+        name: newItemName,
+        category_id: newItemCategory || '',
+        specification_values: {}
+      } : null;
+      
+      setFormData(initialData);
+      setFormOpen(true);
+      
+      // Reset the add form fields after opening the modal
+      setNewItemName('');
+      setNewItemCategory('');
     } else {
       // Redirect to login page with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
@@ -174,80 +328,44 @@ const SearchPage = () => {
     <>
       <Navbar />
       <div className={styles.searchPageBg}>
-        <div className={styles.searchCard}>
-          <div className={styles.searchTitle}>Search or add an item</div>
-          <form 
-            className={styles.searchForm} 
-            onSubmit={e => { 
-              e.preventDefault();
-              search(); // Explicit search on submit
-            }}
-          >
-            <input
-              type="text"
-              className={`form-control ${styles.searchInput}`}
-              placeholder="Search by item name"
-              value={query}
-              onChange={e => {
-                setQuery(e.target.value);
-                // Call our debounced search function
-                debouncedSearch();
-              }}
-            />
-            <select 
-              className={`form-select ${styles.searchSelect}`} 
-              value={category} 
-              onChange={e => {
-                setCategory(e.target.value);
-                // Call our debounced search function
-                debouncedSearch();
-              }}
-            >
-              <option value="">All Categories</option>
-              {categoriesList.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <Button className={styles.searchBtn} onClick={openNew}>
-              Add
-            </Button>
-            
-          </form>
-        </div>
+        {/* Search panel as a separate component */}
+        <SearchPanel
+          query={query}
+          setQuery={setQuery}
+          category={category}
+          setCategory={setCategory}
+          categoriesList={categoriesList}
+          debouncedSearch={debouncedSearch}
+          search={search}
+        />
+
+        {/* Add item panel as a separate component */}
+        <AddItemPanel
+          newItemName={newItemName}
+          setNewItemName={setNewItemName}
+          newItemCategory={newItemCategory}
+          setNewItemCategory={setNewItemCategory}
+          categoriesList={categoriesList}
+          openNew={openNew}
+        />
 
         {hasSearched && (
-          <div className={styles.resultsSection}>
-            {results.length === 0 ? (
-              <div className={styles.noResults}>No results</div>
-            ) : (
-              <ul className="list-group">
-                {results.map(item => (
-                  <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center">
-                    <span>{item.name}</span>
-                    <div>
-                      {isAuthenticated() && (
-                        <Button variant="link" onClick={() => openEdit(item)}>Edit</Button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {/* <Button onClick={openNew} variant="success" className={styles.newItemBtn}>New Item</Button> */}
-          </div>
+          <SearchResults 
+            results={results} 
+            isAuthenticated={isAuthenticated} 
+            openEdit={openEdit}
+          />
         )}
 
   {/* Use ItemForm to view/edit selected item */}
 
-        {/* Only render ItemForm when it's open */}
-        {formOpen && (
-          <ItemForm
-            show={formOpen}
-            initialData={formData}
-            onClose={() => setFormOpen(false)}
-            onSave={handleSave}
-          />
-        )}
+        {/* Use the ItemFormModal component */}
+        <ItemFormModal
+          formOpen={formOpen}
+          formData={formData}
+          setFormOpen={setFormOpen}
+          handleSave={handleSave}
+        />
       </div>
     </>
   );
