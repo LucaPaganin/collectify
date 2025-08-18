@@ -215,26 +215,29 @@ const AdminPage = () => {
 
   // Add a new specification field
   const addSpecificationField = () => {
-    const newSpec = {
-      key: '',
-      label: '',
-      type: 'text',
-      placeholder: '',
-      display_order: 0 // Add new fields at the top
-    };
-    
     setState(prev => {
       const currentSpecs = prev.modals.specifications.specifications;
+      // Calculate the next display order (should be the highest + 1)
+      const nextDisplayOrder = currentSpecs.length > 0 
+        ? Math.max(...currentSpecs.map(spec => spec.display_order || 0)) + 1 
+        : 0;
+      
+      // Create new spec with display order at the end
+      const newSpec = {
+        key: '',
+        label: '',
+        type: 'text',
+        placeholder: '',
+        display_order: nextDisplayOrder // Add new fields at the bottom
+      };
+      
       return {
         ...prev,
         modals: {
           ...prev.modals,
           specifications: {
             ...prev.modals.specifications,
-            specifications: [newSpec, ...currentSpecs.map(spec => ({
-              ...spec,
-              display_order: (spec.display_order || 0) + 1
-            }))]
+            specifications: [...currentSpecs, newSpec] // Add to the end of the array
           }
         }
       };
