@@ -11,4 +11,5 @@
         "/src/components/*": "${workspaceFolder}/frontend/src/components/*",
         "/src/containers/*": "${workspaceFolder}/frontend/src/containers/*"
     },
+    "git.ignoreLimitWarning": true,
 }

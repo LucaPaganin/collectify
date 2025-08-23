@@ -3,6 +3,7 @@ import axios from 'axios'; // Keep for axios.isCancel
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
@@ -354,6 +355,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   const [error, setError] = useState(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(initialData?.primary_photo_url || null);
   const [authInProgress, setAuthInProgress] = useState(false);
+  // Disambiguation state
+  const [showDisambiguationDialog, setShowDisambiguationDialog] = useState(false);
+  const [disambiguatedName, setDisambiguatedName] = useState('');
+  
   const navigate = useNavigate();
   
   // auth state
@@ -520,31 +525,53 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     }
   };
 
-  // Handle form submission
-  const handleSubmit = async (e, skipAuthCheck = false) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
+  // Check if an item name already exists in the same category
+  const checkDuplicateName = async (name, categoryId, currentItemId = null) => {
+    try {
+      // Search for items with the same name in the same category
+      const searchParams = new URLSearchParams({
+        name: name,
+        category_id: categoryId
+      });
+      
+      const res = await api.get(`/items/search?${searchParams.toString()}`);
+      
+      // Filter out the current item (if editing)
+      const duplicates = currentItemId 
+        ? res.data.filter(item => item.id !== currentItemId && item.name === name)
+        : res.data.filter(item => item.name === name);
+      
+      return duplicates.length > 0;
+    } catch (error) {
+      console.error('Error checking for duplicate names:', error);
+      return false; // Assume no duplicates if the check fails
     }
+  };
+
+  // Generate a disambiguated name by adding a numeric suffix
+  const generateDisambiguatedName = (baseName) => {
+    // Extract any existing numeric suffix
+    const match = baseName.match(/^(.+?)(?:\s*\((\d+)\))?$/);
+    if (!match) return `${baseName} (1)`;
     
-    // Check authentication status before proceeding
-    if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
-      setAuthInProgress(true);
-      // Get the current location to redirect back after login
-      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      navigate(`/login?returnUrl=${returnUrl}`);
-      return;
-    }
+    const [, nameWithoutSuffix, existingSuffix] = match;
+    const newSuffix = existingSuffix ? parseInt(existingSuffix) + 1 : 1;
     
-    // Reset auth progress state
-    setAuthInProgress(false);
-    
+    return `${nameWithoutSuffix.trim()} (${newSuffix})`;
+  };
+
+  // Handle save with disambiguation
+  const saveWithDisambiguation = async (useDisambiguatedName = false) => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Use either the disambiguated name or the original name
+      const finalName = useDisambiguatedName ? disambiguatedName : form.name;
+      
       // Prepare payload with properly formatted data
       const payload = {
-        name: form.name,
+        name: finalName,
         category_id: form.category_id,
         specification_values: form.specs || {}
       };
@@ -569,7 +596,47 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       console.error('Error submitting item:', error);
       setIsLoading(false);
       setError(error.response?.data?.error || 'An error occurred while saving the item. Please try again.');
+    } finally {
+      // Reset disambiguation state
+      setShowDisambiguationDialog(false);
     }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e, skipAuthCheck = false) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
+    // Check authentication status before proceeding
+    if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
+      setAuthInProgress(true);
+      // Get the current location to redirect back after login
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+    
+    // Reset auth progress state
+    setAuthInProgress(false);
+    
+    // Check for duplicate name before submitting
+    const isDuplicate = await checkDuplicateName(
+      form.name, 
+      form.category_id,
+      initialData?.id
+    );
+    
+    if (isDuplicate) {
+      // Generate a suggested disambiguated name
+      const newName = generateDisambiguatedName(form.name);
+      setDisambiguatedName(newName);
+      setShowDisambiguationDialog(true);
+      return;
+    }
+    
+    // If no duplicate, proceed with normal save
+    await saveWithDisambiguation(false);
   };
 
   // Auto-upload provided photo file when in edit mode
@@ -603,81 +670,107 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   }, [show, initialData?.id, autoUploadPhotoFile]);
 
   return (
-    <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
-        {/* Category selection */}
-        <div className="mb-2">
-          <label className="form-label">Category</label>
-          <select
-            className="form-select"
-            name="category_id"
-            value={form.category_id}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select category</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        {/* Item name */}
-        <div className="mb-2">
-          <Input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            label="Name"
-            placeholder="Item name"
-            required
-          />
-        </div>
-        
-        {/* Dynamic specification fields */}
-        {specFields.map(field => (
-          <div className="mb-2" key={field.name}>
-            <label className="form-label">{field.label}</label>
+    <>
+      <Modal show={show} title={initialData ? 'Edit Item' : 'New Item'} onClose={onClose}>
+        <form onSubmit={handleSubmit}>
+          {/* Category selection */}
+          <div className="mb-2">
+            <label className="form-label">Category</label>
+            <select
+              className="form-select"
+              name="category_id"
+              value={form.category_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select category</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Item name */}
+          <div className="mb-2">
             <Input
-              name={field.name}
-              value={form.specs[field.name] || ''}
-              onChange={e => handleSpecChange(field.name, e.target.value)}
-              placeholder={field.label}
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              label="Name"
+              placeholder="Item name"
+              required
             />
           </div>
-        ))}
-        
-        {/* Photo upload controls - only when editing an existing item */}
-        {initialData && initialData.id && (
-          <PhotoUpload 
-            initialData={initialData} 
-            onPhotoUpload={handlePhotoUploaded}
-            currentPhotoUrl={photoPreviewUrl}
-          />
-        )}
-        
-        {/* Form actions */}
-        <div className="mt-3 text-end">
-          {error && (
-            <div className="alert alert-danger mb-3" role="alert">
-              {error}
+          
+          {/* Dynamic specification fields */}
+          {specFields.map(field => (
+            <div className="mb-2" key={field.name}>
+              <label className="form-label">{field.label}</label>
+              <Input
+                name={field.name}
+                value={form.specs[field.name] || ''}
+                onChange={e => handleSpecChange(field.name, e.target.value)}
+                placeholder={field.label}
+              />
             </div>
+          ))}
+          
+          {/* Photo upload controls - only when editing an existing item */}
+          {initialData && initialData.id && (
+            <PhotoUpload 
+              initialData={initialData} 
+              onPhotoUpload={handlePhotoUploaded}
+              currentPhotoUrl={photoPreviewUrl}
+            />
           )}
-          <Button 
-            variant="secondary" 
-            type="button" 
-            onClick={onClose} 
-            className="me-2" 
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          
+          {/* Form actions */}
+          <div className="mt-3 text-end">
+            {error && (
+              <div className="alert alert-danger mb-3" role="alert">
+                {error}
+              </div>
+            )}
+            <Button 
+              variant="secondary" 
+              type="button" 
+              onClick={onClose} 
+              className="me-2" 
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Disambiguation dialog */}
+      <ConfirmationDialog
+        show={showDisambiguationDialog}
+        title="Duplicate Item Name"
+        message={
+          <div>
+            <p>An item with the name <strong>{form.name}</strong> already exists in this category.</p>
+            <p>Would you like to save this item with a suggested unique name instead?</p>
+            <Input
+              name="disambiguatedName"
+              value={disambiguatedName}
+              onChange={(e) => setDisambiguatedName(e.target.value)}
+              label="Suggested name"
+              className="mt-3"
+            />
+          </div>
+        }
+        confirmLabel="Use Suggested Name"
+        cancelLabel="Use Original Name"
+        onConfirm={() => saveWithDisambiguation(true)}
+        onCancel={() => saveWithDisambiguation(false)}
+        onClose={() => setShowDisambiguationDialog(false)}
+      />
+    </>
   );
 };
 
