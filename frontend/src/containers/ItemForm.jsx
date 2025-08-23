@@ -530,17 +530,18 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     try {
       // Search for items with the same name in the same category
       const searchParams = new URLSearchParams({
-        name: name,
+        search: name,
         category_id: categoryId
       });
       
-      const res = await api.get(`/items/search?${searchParams.toString()}`);
+      const res = await api.get(`/items?${searchParams.toString()}`);
       
       // Filter out the current item (if editing)
       const duplicates = currentItemId 
-        ? res.data.filter(item => item.id !== currentItemId && item.name === name)
-        : res.data.filter(item => item.name === name);
+        ? res.data.filter(item => item.id !== parseInt(currentItemId) && item.name.toLowerCase() === name.toLowerCase())
+        : res.data.filter(item => item.name.toLowerCase() === name.toLowerCase());
       
+      console.log('Checking duplicates:', duplicates);
       return duplicates.length > 0;
     } catch (error) {
       console.error('Error checking for duplicate names:', error);
@@ -568,6 +569,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     try {
       // Use either the disambiguated name or the original name
       const finalName = useDisambiguatedName ? disambiguatedName : form.name;
+      console.log('Saving item with name:', finalName);
       
       // Prepare payload with properly formatted data
       const payload = {
@@ -576,6 +578,8 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         specification_values: form.specs || {}
       };
       
+      console.log('Payload:', payload);
+      
       // Set the appropriate content type for JSON data
       const config = {
         headers: {
@@ -583,22 +587,35 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         }
       };
       
+      let response;
+      
       if (initialData && initialData.id) {
-        const res = await api.put(`/items/${initialData.id}`, JSON.stringify(payload), config);
-        setIsLoading(false);
-        onSave(res?.data || initialData);
+        console.log(`Updating item ${initialData.id}`);
+        response = await api.put(`/items/${initialData.id}`, JSON.stringify(payload), config);
       } else {
-        const res = await api.post('/items', JSON.stringify(payload), config);
-        setIsLoading(false);
-        onSave(res?.data);
+        console.log('Creating new item');
+        response = await api.post('/items', JSON.stringify(payload), config);
+      }
+      
+      console.log('API response:', response);
+      setIsLoading(false);
+      
+      // Close the dialog and call onSave with the response data
+      setShowDisambiguationDialog(false);
+      
+      if (initialData && initialData.id) {
+        onSave(response?.data || initialData);
+      } else {
+        onSave(response?.data);
       }
     } catch (error) {
       console.error('Error submitting item:', error);
       setIsLoading(false);
       setError(error.response?.data?.error || 'An error occurred while saving the item. Please try again.');
-    } finally {
-      // Reset disambiguation state
-      setShowDisambiguationDialog(false);
+      // Keep the dialog open if there's an error during saving with a disambiguated name
+      if (!useDisambiguatedName) {
+        setShowDisambiguationDialog(false);
+      }
     }
   };
 
@@ -608,9 +625,12 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       e.preventDefault();
     }
     
+    console.log('Form submission initiated');
+    
     // Check authentication status before proceeding
     if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
       setAuthInProgress(true);
+      console.log('User not authenticated, redirecting to login');
       // Get the current location to redirect back after login
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/login?returnUrl=${returnUrl}`);
@@ -620,6 +640,15 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     // Reset auth progress state
     setAuthInProgress(false);
     
+    // Don't proceed if category or name is empty
+    if (!form.category_id || !form.name) {
+      console.log('Missing required fields', form);
+      setError('Name and category are required.');
+      return;
+    }
+    
+    console.log('Checking for duplicate name:', form.name, 'in category:', form.category_id);
+    
     // Check for duplicate name before submitting
     const isDuplicate = await checkDuplicateName(
       form.name, 
@@ -627,14 +656,18 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       initialData?.id
     );
     
+    console.log('Duplicate check result:', isDuplicate);
+    
     if (isDuplicate) {
       // Generate a suggested disambiguated name
       const newName = generateDisambiguatedName(form.name);
+      console.log('Duplicate found, suggesting new name:', newName);
       setDisambiguatedName(newName);
       setShowDisambiguationDialog(true);
       return;
     }
     
+    console.log('No duplicate found, proceeding with normal save');
     // If no duplicate, proceed with normal save
     await saveWithDisambiguation(false);
   };

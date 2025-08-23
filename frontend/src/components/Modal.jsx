@@ -5,13 +5,20 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from './Button';
 
-const Modal = ({ show, title, children, onClose }) => (
-  <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
+const Modal = ({ show, title, children, onClose, hideCloseButton = false }) => (
+  <Dialog 
+    open={show} 
+    onClose={onClose} 
+    fullWidth 
+    maxWidth="sm"
+  >
     <DialogTitle>{title}</DialogTitle>
     <DialogContent dividers>{children}</DialogContent>
-    <DialogActions>
-      <Button onClick={onClose} color="secondary">Close</Button>
-    </DialogActions>
+    {!hideCloseButton && (
+      <DialogActions>
+        <Button onClick={onClose} color="secondary">Close</Button>
+      </DialogActions>
+    )}
   </Dialog>
 );
 

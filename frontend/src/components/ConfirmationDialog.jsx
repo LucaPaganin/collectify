@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Button from './Button';
 import Modal from './Modal';
 
@@ -27,20 +27,45 @@ const ConfirmationDialog = ({
   // Use onClose if provided, otherwise fall back to onCancel
   const handleClose = onClose || onCancel;
   
+  // Debug visibility state changes
+  useEffect(() => {
+    if (show) {
+      console.log('ConfirmationDialog shown:', { title, message });
+    } else {
+      console.log('ConfirmationDialog hidden');
+    }
+  }, [show, title, message]);
+  
+  // Wrap callback functions to add logging
+  const handleConfirm = () => {
+    console.log('ConfirmationDialog: Confirm button clicked');
+    if (onConfirm) onConfirm();
+  };
+  
+  const handleCancel = () => {
+    console.log('ConfirmationDialog: Cancel button clicked');
+    if (onCancel) onCancel();
+  };
+  
+  const handleCloseDialog = () => {
+    console.log('ConfirmationDialog: Close button clicked');
+    if (handleClose) handleClose();
+  };
+  
   return (
-    <Modal show={show} title={title} onClose={handleClose}>
+    <Modal show={show} title={title} onClose={handleCloseDialog} hideCloseButton={true}>
       <div className="py-2">
         {typeof message === 'string' ? <p>{message}</p> : message}
         <div className="d-flex justify-content-end gap-2 mt-4">
           <Button 
             variant="secondary" 
-            onClick={onCancel}
+            onClick={handleCancel}
           >
             {cancelLabel}
           </Button>
           <Button 
             variant="primary" 
-            onClick={onConfirm}
+            onClick={handleConfirm}
           >
             {confirmLabel}
           </Button>
