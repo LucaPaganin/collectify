@@ -6,7 +6,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from './Button';
 
 const Modal = ({ show, title, children, onClose }) => (
-  <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
+  <Dialog open={show} onClose={onClose} fullWidth maxWidth="md">
     <DialogTitle>{title}</DialogTitle>
     <DialogContent dividers>{children}</DialogContent>
     <DialogActions>
