@@ -257,14 +257,14 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
           onCancel={() => setShowCamera(false)}
         />
       ) : capturedPhoto ? (
-        <div className="mb-3">
+        <div className="mb-3" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <img 
             src={capturedPhoto.previewUrl} 
             alt="Captured" 
             style={{ 
               width: '100%', 
-              maxHeight: 280, 
-              objectFit: 'cover', 
+              maxHeight: 400, 
+              objectFit: 'contain', 
               borderRadius: 12 
             }} 
           />
@@ -278,15 +278,16 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
           </div>
         </div>
       ) : currentPhotoUrl && !photoUploading ? (
-        <div className="mb-3">
+        <div className="mb-3" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <img 
             src={currentPhotoUrl} 
             alt="Item" 
             style={{ 
               width: '100%', 
-              maxHeight: 280, 
-              objectFit: 'cover', 
-              borderRadius: 12 
+              maxHeight: 400, 
+              objectFit: 'contain', 
+              borderRadius: 12, 
+              backgroundColor: '#f5f5f5'
             }} 
           />
           <div className="d-flex align-items-center gap-2 mt-3">
