@@ -5,6 +5,7 @@ from flask import request, jsonify, current_app
 from models import db, Item, ItemUrl, ItemPhoto, Category
 from utils.auth import requires_auth, token_required
 from utils.decorators import log_exceptions
+from utils.file_helpers import sanitize_filename
 
 def register_item_routes(app):
     """Register item API routes with the Flask application."""
@@ -133,9 +134,17 @@ def register_item_routes(app):
         if files:
             for file in files.getlist('photos[]'):
                 if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']:
-                    filename = f"item_{new_item.id}_{file.filename}"
-                    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                    # Sanitize filename for URL safety
+                    safe_filename = sanitize_filename(file.filename)
+                    # Prefix with item ID for organization
+                    filename = f"item_{new_item.id}_{safe_filename}"
+                    
+                    # Save the file
+                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+                    
                     new_item.photos.append(ItemPhoto(file_path=filename))
+                    current_app.logger.info(f"Photo uploaded during item creation: {filename}")
         
         # Commit all changes
         db.session.commit()
@@ -203,9 +212,17 @@ def register_item_routes(app):
         if files and files.getlist('photos[]'):
             for file in files.getlist('photos[]'):
                 if file and file.filename and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']:
-                    filename = f"item_{id}_{file.filename}"
-                    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                    # Sanitize filename for URL safety
+                    safe_filename = sanitize_filename(file.filename)
+                    # Prefix with item ID for organization
+                    filename = f"item_{id}_{safe_filename}"
+                    
+                    # Save the file
+                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+                    
                     item.photos.append(ItemPhoto(file_path=filename))
+                    current_app.logger.info(f"Photo uploaded during item update: {filename}")
         
         db.session.commit()
         
@@ -285,13 +302,21 @@ def register_item_routes(app):
             
         file = request.files['photos[]']
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']:
-            filename = f"item_{id}_{file.filename}"
-            file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+            # Sanitize filename for URL safety
+            safe_filename = sanitize_filename(file.filename)
+            # Prefix with item ID for organization
+            filename = f"item_{id}_{safe_filename}"
             
+            # Save the file
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Create database record with the sanitized filename
             photo = ItemPhoto(item_id=id, file_path=filename)
             db.session.add(photo)
             db.session.commit()
             
+            current_app.logger.info(f"Photo uploaded: {filename}")
             return jsonify({'id': photo.id, 'filename': filename}), 201
         else:
             return jsonify({'error': 'Invalid file format'}), 400

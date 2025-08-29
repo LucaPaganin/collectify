@@ -192,7 +192,10 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
       
       const filename = res?.data?.filename;
       if (filename) {
-        onPhotoUpload(`/uploads/${filename}`);
+        // Construct the full URL using the API base URL
+        const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
+        onPhotoUpload(`${apiBaseUrl}/uploads/${filename}`);
+        console.log(`Photo URL: ${apiBaseUrl}/uploads/${filename}`);
       }
     } catch (err) {
       console.error('Error uploading photo:', err);
@@ -257,17 +260,39 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
           onCancel={() => setShowCamera(false)}
         />
       ) : capturedPhoto ? (
-        <div className="mb-3" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <img 
-            src={capturedPhoto.previewUrl} 
-            alt="Captured" 
+        <div className="mb-3">
+          <div 
             style={{ 
-              width: '100%', 
-              maxHeight: 400, 
-              objectFit: 'contain', 
-              borderRadius: 12 
-            }} 
-          />
+              minHeight: 400, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'center',
+              margin: '0 auto',
+              border: '1px solid #dee2e6',
+              borderRadius: '12px',
+              padding: '10px',
+              backgroundColor: '#f8f9fa'
+            }}
+          >
+            <a 
+              href={capturedPhoto.previewUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
+              title="Click to open full image in new tab"
+            >
+              <img 
+                src={capturedPhoto.previewUrl} 
+                alt="Captured" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: 400, 
+                  objectFit: 'contain', 
+                  borderRadius: 8 
+                }} 
+              />
+            </a>
+          </div>
           <div className="d-flex gap-2 mt-2">
             <Button variant="outline-danger" onClick={handleDiscardPhoto} className="flex-grow-1">
               Discard
@@ -278,18 +303,39 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
           </div>
         </div>
       ) : currentPhotoUrl && !photoUploading ? (
-        <div className="mb-3" style={{ minHeight: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <img 
-            src={currentPhotoUrl} 
-            alt="Item" 
+        <div className="mb-3">
+          <div 
             style={{ 
-              width: '100%', 
-              maxHeight: 400, 
-              objectFit: 'contain', 
-              borderRadius: 12, 
-              backgroundColor: '#f5f5f5'
-            }} 
-          />
+              minHeight: 400, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'center',
+              margin: '0 auto',
+              border: '1px solid #dee2e6',
+              borderRadius: '12px',
+              padding: '10px',
+              backgroundColor: '#f8f9fa'
+            }}
+          >
+            <a 
+              href={currentPhotoUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
+              title="Click to open full image in new tab"
+            >
+              <img 
+                src={currentPhotoUrl} 
+                alt="Item" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: 400, 
+                  objectFit: 'contain', 
+                  borderRadius: 8
+                }} 
+              />
+            </a>
+          </div>
           <div className="d-flex align-items-center gap-2 mt-3">
             <input
               type="file"
@@ -409,7 +455,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
               category_id: itemData.category_id || '',
               specs: specValues,
             });
-            setPhotoPreviewUrl(itemData.primary_photo ? `/uploads/${itemData.primary_photo}` : initialData.primary_photo_url);
+            
+            // Construct the full URL using the API base URL
+            const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
+            setPhotoPreviewUrl(itemData.primary_photo ? `${apiBaseUrl}/uploads/${itemData.primary_photo}` : initialData.primary_photo_url);
           } catch (error) {
             console.error('Error fetching item data:', error);
             // Fallback to initialData if API request fails
@@ -522,6 +571,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   const handlePhotoUploaded = (url) => {
     // Only update the state URL if not null or a blob URL (temp preview)
     if (url !== null) {
+      console.log('Photo URL updated:', url);
       setPhotoPreviewUrl(url);
     }
   };
@@ -687,7 +737,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
           
           const filename = res?.data?.filename;
           if (filename) {
-            setPhotoPreviewUrl(`/uploads/${filename}`);
+            // Construct the full URL using the API base URL
+            const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
+            setPhotoPreviewUrl(`${apiBaseUrl}/uploads/${filename}`);
+            console.log(`Auto-uploaded photo URL: ${apiBaseUrl}/uploads/${filename}`);
           }
         } catch (err) {
           console.error('Error auto-uploading photo:', err);

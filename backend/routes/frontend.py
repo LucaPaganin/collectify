@@ -73,6 +73,8 @@ def register_frontend_routes(app):
     @log_exceptions
     def uploaded_file(filename):
         """Serves uploaded image files."""
+        # Sanitize filename (just in case) to prevent directory traversal
+        filename = os.path.basename(filename)
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
         
     @app.route('/item/<int:id>/edit', methods=['POST'])

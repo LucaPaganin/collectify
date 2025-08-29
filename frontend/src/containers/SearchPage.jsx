@@ -278,9 +278,11 @@ const SearchPage = () => {
         const fullItemData = response.data;
         
         // Add primary_photo_url to item data when editing using the primary_photo filename
+        // Construct the full URL using the API base URL
+        const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
         const itemWithPhotoUrl = {
           ...fullItemData,
-          primary_photo_url: fullItemData.primary_photo ? `/uploads/${fullItemData.primary_photo}` : null
+          primary_photo_url: fullItemData.primary_photo ? `${apiBaseUrl}/uploads/${fullItemData.primary_photo}` : null
         };
         
         setFormData(itemWithPhotoUrl); 
@@ -288,9 +290,10 @@ const SearchPage = () => {
       } catch (error) {
         console.error('Error fetching item details:', error);
         // Fallback to basic data if API call fails
+        const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
         const itemWithPhotoUrl = {
           ...item,
-          primary_photo_url: item.primary_photo ? `/uploads/${item.primary_photo}` : null
+          primary_photo_url: item.primary_photo ? `${apiBaseUrl}/uploads/${item.primary_photo}` : null
         };
         setFormData(itemWithPhotoUrl); 
         setFormOpen(true);
@@ -312,9 +315,10 @@ const SearchPage = () => {
       // Immediately open edit dialog with the newly created item
       setTimeout(() => {
         // Add primary_photo_url when opening for edit
+        const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
         const itemWithPhotoUrl = {
           ...savedItem,
-          primary_photo_url: savedItem.primary_photo ? `/uploads/${savedItem.primary_photo}` : null
+          primary_photo_url: savedItem.primary_photo ? `${apiBaseUrl}/uploads/${savedItem.primary_photo}` : null
         };
         setFormData(itemWithPhotoUrl);
         setFormOpen(true);
