@@ -13,7 +13,34 @@ export const api = axios.create({
 });
 
 // Log the API URL for debugging
-console.log(`API URL configured as: ${config.apiUrl}`);
+console.log(`API configured with base URL: ${config.apiUrl}`);
+console.log(`Current window location: ${window.location.origin}`);
+
+// Test the API connection on startup
+const testApiConnection = async () => {
+  try {
+    // Attempt a simple OPTIONS request to check connectivity
+    const response = await api.options('/');
+    console.log('API connection test successful:', response.status);
+    return true;
+  } catch (error) {
+    console.error('API connection test failed:', error.message);
+    // If the connection failed, log detailed information to help debugging
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    } else if (error.request) {
+      console.error('No response received. Request details:', {
+        url: error.request.url || config.apiUrl,
+        method: error.request.method || 'OPTIONS',
+      });
+    }
+    return false;
+  }
+};
+
+// Run the API connection test
+testApiConnection();
 
 // Add response interceptor to handle common errors
 api.interceptors.response.use(
@@ -31,6 +58,16 @@ api.interceptors.response.use(
       } else if (error.request) {
         // The request was made but no response was received
         console.error('No response received:', error.request);
+        console.error('Request URL:', error.config?.url);
+        console.error('Request method:', error.config?.method);
+        console.error('Request baseURL:', error.config?.baseURL);
+        
+        // If we're getting network errors, it could be due to incorrect host
+        if (error.message && error.message.includes('Network Error')) {
+          console.error('Network error detected - this may be due to incorrect API host configuration');
+          console.error('Current API URL:', config.apiUrl);
+          console.error('Current window location:', window.location.origin);
+        }
       } else {
         // Something happened in setting up the request that triggered an Error
         console.error('Request setup error:', error.message);

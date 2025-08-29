@@ -1,0 +1,83 @@
+/* ApiStatus.module.css */
+
+.container {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 9999;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 10px;
+  max-width: 400px;
+  font-size: 14px;
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.statusInfo {
+  display: flex;
+  align-items: center;
+}
+
+.indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.connected {
+  background-color: #28a745;
+}
+
+.loading {
+  background-color: #ffc107;
+}
+
+.disconnected {
+  background-color: #dc3545;
+}
+
+.toggleButton {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+}
+
+.detailsContainer {
+  margin-top: 10px;
+}
+
+.infoRow {
+  margin-bottom: 8px;
+}
+
+.checkButton {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.detailsContent {
+  background-color: #f1f1f1;
+  padding: 8px;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: monospace;
+  white-space: pre-wrap;
+}
