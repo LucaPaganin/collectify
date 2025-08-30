@@ -7,166 +7,7 @@ import ConfirmationDialog from '../components/ConfirmationDialog';
 import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
-
-// Component for handling camera capture functionality
-const CameraCapture = ({ onCapture, onCancel }) => {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-  const [cameraError, setCameraError] = useState(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-
-  // Initialize camera on component mount
-  useEffect(() => {
-    startCamera();
-    // Clean up on unmount
-    return () => {
-      stopCamera();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startCamera = async () => {
-    setCameraError(null);
-    
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError('Camera access not supported in this browser');
-      return;
-    }
-    
-    try {
-      // Request camera access with options for rear camera if available
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      });
-      
-      streamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        // Wait for video to actually start playing
-        videoRef.current.onloadeddata = () => {
-          setIsStreaming(true);
-        };
-        
-        // Start playing the video
-        try {
-          await videoRef.current.play();
-        } catch (err) {
-          console.error('Failed to play video stream:', err);
-          setCameraError('Could not play video stream. Please check camera permissions.');
-        }
-      }
-    } catch (err) {
-      console.error('Camera error:', err);
-      setCameraError(err.message || 'Failed to access camera');
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-      videoRef.current.onloadeddata = null;
-    }
-    
-    setIsStreaming(false);
-  };
-
-  const handleTakePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      setCameraError('Camera is not ready');
-      return;
-    }
-    
-    try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      // Set canvas size to match video dimensions
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      // Draw the current video frame to canvas
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Convert canvas to blob
-      canvas.toBlob(blob => {
-        if (!blob) {
-          setCameraError('Failed to capture image');
-          return;
-        }
-        
-        // Create file from blob
-        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
-        
-        // Pass the captured photo back to parent component
-        onCapture(file);
-      }, 'image/jpeg', 0.92);
-    } catch (err) {
-      console.error('Error capturing photo:', err);
-      setCameraError('Failed to capture photo');
-    }
-  };
-
-  return (
-    <div className="camera-capture mt-3">
-      {cameraError && (
-        <div className="alert alert-danger">{cameraError}</div>
-      )}
-      
-      <div className="position-relative mb-3">
-        <video 
-          ref={videoRef}
-          autoPlay 
-          playsInline
-          style={{ 
-            width: '100%', 
-            borderRadius: '8px',
-            background: '#000',
-            display: 'block'
-          }}
-        />
-        
-        {!isStreaming && (
-          <div 
-            className="position-absolute top-0 left-0 w-100 h-100 d-flex justify-content-center align-items-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
-          >
-            <div className="spinner-border text-light" role="status">
-              <span className="visually-hidden">Loading camera...</span>
-            </div>
-          </div>
-        )}
-      </div>
-      
-      <div className="d-flex justify-content-between mt-2">
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleTakePhoto} 
-          disabled={!isStreaming}
-        >
-          Take Photo
-        </Button>
-      </div>
-      
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-    </div>
-  );
-};
+import Camera from '../components/Camera';
 
 // Component for handling photo uploads
 const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
@@ -254,10 +95,28 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
     <div className="photo-upload mb-3">
       <label className="form-label">Item Image</label>
       
+      {photoError && (
+        <div className="alert alert-danger">
+          <strong>Error: </strong>{photoError}
+          {photoError.includes('not supported') && (
+            <div className="mt-2">
+              <small>
+                Try using a different browser like Chrome or Safari, or check if your device has a camera.
+              </small>
+            </div>
+          )}
+        </div>
+      )}
+      
       {showCamera ? (
-        <CameraCapture 
+        <Camera 
           onCapture={handleCameraCapture}
           onCancel={() => setShowCamera(false)}
+          onError={(error) => {
+            console.error('Camera error:', error);
+            setPhotoError(error.message || 'Failed to access camera');
+            setShowCamera(false);
+          }}
         />
       ) : capturedPhoto ? (
         <div className="mb-3">
@@ -388,7 +247,17 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
       )}
       
       {photoError && (
-        <div className="alert alert-danger mt-2">{photoError}</div>
+        <div className="alert alert-danger mt-2">
+          <strong>Error: </strong>{photoError}
+          {photoError.includes('not supported') && (
+            <div className="mt-2">
+              <small>
+                Try using a different browser like Chrome or Safari, or check if your device has a camera.
+                On some mobile devices, you may need to allow camera access in your browser settings.
+              </small>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

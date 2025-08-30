@@ -1,0 +1,31 @@
+import React from 'react';
+import styles from './Camera.module.css';
+
+const CameraControls = ({ onCapture, onSwitchCamera, hasFrontCamera }) => {
+  return (
+    <div className={styles.controlsContainer}>
+      {hasFrontCamera && (
+        <button 
+          className={styles.switchButton} 
+          onClick={onSwitchCamera} 
+          aria-label="Switch camera"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-5.904-2.854a.5.5 0 1 1 .707.708L6.707 9.95h2.768a.5.5 0 1 1 0 1H5.5a.5.5 0 0 1-.5-.5V6.475a.5.5 0 1 1 1 0v2.768l4.096-4.097z"/>
+          </svg>
+        </button>
+      )}
+      <button 
+        className={styles.captureButton} 
+        onClick={onCapture}
+        aria-label="Take photo"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="6" fill="white"/>
+        </svg>
+      </button>
+    </div>
+  );
+};
+
+export default CameraControls;
