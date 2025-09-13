@@ -88,9 +88,14 @@ function App() {
   
   // API Connectivity warning component
   const ApiConnectivityWarning = () => {
-    if (!apiStatus.checked || apiStatus.connected) {
+    const [dismissed, setDismissed] = useState(false);
+    
+    if (!apiStatus.checked || apiStatus.connected || dismissed) {
       return null;
     }
+    
+    // Check if we're using HTTPS on frontend but HTTP for API
+    const isHttpsMismatch = window.location.protocol === 'https:' && config.apiUrl.startsWith('http:');
     
     return (
       <div style={{
@@ -100,19 +105,67 @@ function App() {
         right: 0,
         backgroundColor: '#f8d7da',
         color: '#721c24',
-        padding: '10px 20px',
+        padding: '15px 20px',
         zIndex: 9999,
         textAlign: 'center',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
       }}>
         <p style={{ margin: '0 0 5px 0' }}>
           <strong>API Connection Error:</strong> Unable to connect to the API server at <code>{config.apiUrl}</code>
         </p>
+        
+        {isHttpsMismatch && (
+          <div style={{ margin: '5px 0', padding: '5px 10px', backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px', fontSize: '0.9em', maxWidth: '800px' }}>
+            <p style={{ margin: '5px 0' }}>
+              <strong>Mixed Content Issue:</strong> You're accessing the frontend over HTTPS, but the API is configured for HTTP.
+            </p>
+            <p style={{ margin: '5px 0' }}>
+              Try one of these solutions:
+              <br />
+              1. Configure the backend to use HTTPS as well
+              <br />
+              2. Access the frontend using HTTP instead: <a href={window.location.href.replace('https:', 'http:')} style={{ color: '#721c24', fontWeight: 'bold' }}>{window.location.href.replace('https:', 'http:')}</a>
+            </p>
+          </div>
+        )}
+        
         {apiStatus.suggestedUrl && (
           <p style={{ margin: '5px 0 0 0', fontSize: '0.9em' }}>
             Try accessing the app using this URL instead: <a href={apiStatus.suggestedUrl.replace('/api', '')} style={{ color: '#721c24', textDecoration: 'underline' }}>{apiStatus.suggestedUrl.replace('/api', '')}</a>
           </p>
         )}
+        
+        <div style={{ marginTop: '10px' }}>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              backgroundColor: '#e2a9ad',
+              border: '1px solid #d6888f',
+              borderRadius: '4px',
+              padding: '5px 15px',
+              marginRight: '10px',
+              cursor: 'pointer'
+            }}
+          >
+            Retry Connection
+          </button>
+          
+          <button 
+            onClick={() => setDismissed(true)}
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid #d6888f',
+              borderRadius: '4px',
+              padding: '5px 15px',
+              cursor: 'pointer'
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
       </div>
     );
   };

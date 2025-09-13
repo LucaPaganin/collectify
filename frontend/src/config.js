@@ -7,14 +7,17 @@ const determineApiUrl = () => {
   // Get the configured API URL from environment variables with fallback
   const configuredApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   
-  // Parse the configured URL to get its host
+  // Parse the configured URL to get its host and protocol
   let configuredHost;
+  let configuredProtocol;
   try {
     const urlObj = new URL(configuredApiUrl);
     configuredHost = urlObj.hostname;
+    configuredProtocol = urlObj.protocol;
   } catch (e) {
     console.error('Invalid API_URL format:', configuredApiUrl);
     configuredHost = 'localhost'; // Fallback
+    configuredProtocol = 'http:'; // Fallback
   }
 
   // Check if we're using localhost in the configured URL
@@ -27,16 +30,31 @@ const determineApiUrl = () => {
   }
   
   // If we are using localhost, we should check if we're accessing from a different device
-  // Use the current window location hostname (this will be the IP address when accessing from another device)
+  // Use the current window location hostname and protocol
   const currentHost = window.location.hostname;
+  const currentProtocol = window.location.protocol;
   
   // If we're not accessing via localhost/127.0.0.1, replace the host in the API URL
-  if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') {
+  // Or if the protocol doesn't match (HTTP vs HTTPS), use the current protocol
+  if ((currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') || 
+      (window.location.protocol === 'https:' && configuredProtocol === 'http:')) {
     try {
       const urlObj = new URL(configuredApiUrl);
-      urlObj.hostname = currentHost;
+      
+      // Update hostname if we're on a different device
+      if (currentHost !== 'localhost' && currentHost !== '127.0.0.1' && currentHost !== '') {
+        urlObj.hostname = currentHost;
+      }
+      
+      // Use HTTPS if the frontend is using HTTPS (only when on the same host)
+      // This helps with mixed content blocking when the frontend is on HTTPS
+      if (currentHost === urlObj.hostname && currentProtocol === 'https:') {
+        urlObj.protocol = 'https:';
+        console.log('Frontend using HTTPS, updating API URL to use HTTPS');
+      }
+      
       const newApiUrl = urlObj.toString();
-      console.log(`Accessing from non-localhost (${currentHost}), using API URL: ${newApiUrl}`);
+      console.log(`Adjusted API URL: ${newApiUrl}`);
       return newApiUrl;
     } catch (e) {
       console.error('Error creating new API URL:', e);

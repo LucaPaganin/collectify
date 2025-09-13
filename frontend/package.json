@@ -25,6 +25,9 @@
   },
   "scripts": {
     "start": "cross-env GENERATE_SOURCEMAP=true react-scripts --inspect start --no-cache",
+    "start:https": "cross-env HTTPS=true SSL_CRT_FILE=../certificates/server.crt SSL_KEY_FILE=../certificates/server.key GENERATE_SOURCEMAP=true react-scripts --inspect start --no-cache",
+    "start:https:local": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 HTTPS=true SSL_CRT_FILE=../certificates/server.crt SSL_KEY_FILE=../certificates/server.key GENERATE_SOURCEMAP=true react-scripts --inspect start --no-cache",
+    "start:https:pfx": "cross-env HTTPS=true SSL_PFX_FILE=../certificates/server.pfx SSL_PFX_PASSPHRASE=collectify GENERATE_SOURCEMAP=true react-scripts --inspect start --no-cache",
     "build": "react-scripts build",
     "build:docker": "cp .env.build .env.production && react-scripts build",
     "build:prod": "cp .env.production .env && react-scripts build",
