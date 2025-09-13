@@ -5,7 +5,8 @@ from logging.handlers import RotatingFileHandler
 from config import create_app
 from models import db, User
 from utils.database import ensure_db_initialized
-from routes.frontend import register_frontend_routes
+
+# Register CLI commandsontend import register_frontend_routes
 from routes.categories import register_category_routes
 from routes.items import register_item_routes
 from routes.auth import auth_bp
@@ -14,6 +15,8 @@ from flask_cli import register_commands
 from flask import send_from_directory, abort
 from flask_cors import CORS
 import sys
+import socket
+import ssl
 
 # Create the Flask application
 app = create_app()
@@ -30,6 +33,128 @@ CORS(app,
          "supports_credentials": True
      }}, 
      send_wildcard=True)
+
+
+
+# Add CORS headers to all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Expose-Headers', 'Content-Length,Content-Range')
+    return response
+
+
+def log_startup_info():
+    """Log startup information on first request."""
+    local_ip = get_local_ip()
+    protocol = "https" if use_https else "http"
+    
+    app.logger.info("=" * 50)
+    app.logger.info("Collectify application is now handling requests")
+    app.logger.info(f"Protocol: {protocol.upper()}")
+    app.logger.info(f"Local Access: {protocol}://127.0.0.1:5000")
+    app.logger.info(f"LAN Access: {protocol}://{local_ip}:5000")
+    app.logger.info(f"HTTPS is {'ENABLED' if use_https else 'DISABLED'}")
+    app.logger.info("=" * 50)
+
+# Register CLI commands
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Expose-Headers', 'Content-Length,Content-Range')
+    return response
+
+
+def log_startup_info():
+    """Log startup information on first request."""
+    local_ip = get_local_ip()
+    protocol = "https" if use_https else "http"
+    
+    app.logger.info("=" * 50)
+    app.logger.info("Collectify application is running")
+    app.logger.info(f"Protocol: {protocol.upper()}")
+    app.logger.info(f"Local Access: {protocol}://127.0.0.1:5000")
+    app.logger.info(f"LAN Access: {protocol}://{local_ip}:5000")
+    app.logger.info(f"HTTPS is {'ENABLED' if use_https else 'DISABLED'}")
+    app.logger.info("=" * 50)
+
+def get_local_ip():
+    try:
+        # Get the local hostname
+        hostname = socket.gethostname()
+        # Get the local IP address
+        local_ip = socket.gethostbyname(hostname)
+        return local_ip
+    except Exception as e:
+        app.logger.warning(f"Could not determine local IP: {str(e)}")
+        return "your_local_IP"
+
+def get_ssl_context():
+    """Create an SSL context from certificates using environment variables."""
+    try:
+        # Check for environment variables first
+        ssl_cert = os.environ.get('SSL_CERT_FILE')
+        ssl_key = os.environ.get('SSL_KEY_FILE')
+        ssl_pfx = os.environ.get('SSL_PFX_FILE')
+        ssl_pfx_password = os.environ.get('SSL_PFX_PASSWORD', 'collectify')
+        
+        # If environment variables aren't set, check standard locations
+        cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'certificates')
+        
+        if ssl_cert and ssl_key:
+            app.logger.info(f"Using SSL certificate and key from environment variables")
+        elif ssl_pfx:
+            app.logger.info(f"Using SSL PFX file from environment variable")
+        else:
+            # Look for files in the standard location
+            ssl_cert = os.path.join(cert_dir, 'server.crt')
+            ssl_key = os.path.join(cert_dir, 'server.key')
+            ssl_pfx = os.path.join(cert_dir, 'server.pfx')
+            
+            # Check if files exist
+            has_cert_key = os.path.exists(ssl_cert) and os.path.exists(ssl_key)
+            has_pfx = os.path.exists(ssl_pfx)
+            
+            if has_cert_key:
+                app.logger.info(f"Found SSL certificate and key in certificates directory")
+            elif has_pfx:
+                app.logger.info(f"Found SSL PFX file in certificates directory")
+            else:
+                app.logger.info("No SSL certificates found")
+                return None
+        
+        # Create SSL context
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        
+        # Try CRT+KEY approach first
+        if ssl_cert and ssl_key and os.path.exists(ssl_cert) and os.path.exists(ssl_key):
+            try:
+                ssl_context.load_cert_chain(ssl_cert, ssl_key)
+                app.logger.info("SSL context created successfully from CRT+KEY files")
+                return ssl_context
+            except Exception as e:
+                app.logger.error(f"Error loading CRT+KEY files: {str(e)}")
+        
+        # Try PFX as fallback
+        if ssl_pfx and os.path.exists(ssl_pfx):
+            try:
+                ssl_context.load_cert_chain(ssl_pfx, password=ssl_pfx_password)
+                app.logger.info("SSL context created successfully from PFX file")
+                return ssl_context
+            except Exception as e:
+                app.logger.error(f"Error loading PFX file: {str(e)}")
+        
+        return None
+    except Exception as e:
+        app.logger.error(f"Error setting up SSL context: {str(e)}")
+        return None
+
 
 # Configure logging
 if not app.debug:
@@ -53,7 +178,7 @@ if not app.debug:
 db.init_app(app)
 
 # Register all routes
-register_frontend_routes(app)
+# register_frontend_routes(app)
 register_category_routes(app)
 register_item_routes(app)
 register_admin_init_routes(app)
@@ -138,12 +263,21 @@ app.logger.info(f"Python version: {sys.version}")
 app.logger.info(f"Python executable: {sys.executable}")
 app.logger.info(f"Current directory: {os.getcwd()}")
 app.logger.info(f"Static folder: {app.static_folder}")
+
+# Determine HTTPS status early to ensure proper logging in all execution modes
+ssl_context = get_ssl_context()
+use_https = ssl_context is not None or os.environ.get('FLASK_HTTPS', '0').lower() in ('1', 'true', 'yes')
+protocol = "https" if use_https else "http"
+app.logger.info(f"Server protocol: {protocol.upper()}")
+app.logger.info(f"HTTPS enabled: {use_https}")
+
 app.logger.info(f"Environment variables: {dict(os.environ)}")
 
 # Using Flask's event system instead of before_first_request (which is removed in Flask 3.x)
 # This will run when the first request is received
 with app.app_context():
     # Ensure the database is initialized
+    log_startup_info()
     app.logger.info("[DB] Ensuring database is initialized...")
     ensure_db_initialized(app)
     
@@ -180,38 +314,36 @@ if __name__ == '__main__':
         ensure_db_initialized(app)
     
     # Get the local IP address to display in the welcome message
-    import socket
-    def get_local_ip():
-        try:
-            # Get the local hostname
-            hostname = socket.gethostname()
-            # Get the local IP address
-            local_ip = socket.gethostbyname(hostname)
-            return local_ip
-        except Exception as e:
-            app.logger.warning(f"Could not determine local IP: {str(e)}")
-            return "your_local_IP"
-    
     local_ip = get_local_ip()
     
+    # Use the previously determined protocol from earlier in the file
     app.logger.info("Collectify application starting up")
+    app.logger.info(f"Protocol: {protocol.upper()}")
+    app.logger.info(f"HTTPS enabled: {use_https}")
     
     print("===================================================")
     print(" collectify is running!")
     print(" ")
     print("   Local Access:")
-    print(f"   Public view: http://127.0.0.1:5000")
-    print(f"   Admin panel: http://127.0.0.1:5000/admin.html")
+    print(f"   Public view: {protocol}://127.0.0.1:5000")
+    print(f"   Admin panel: {protocol}://127.0.0.1:5000/admin.html")
     print(" ")
     print("   LAN Access:")
-    print(f"   Public view: http://{local_ip}:5000")
-    print(f"   Admin panel: http://{local_ip}:5000/admin.html")
+    print(f"   Public view: {protocol}://{local_ip}:5000")
+    print(f"   Admin panel: {protocol}://{local_ip}:5000/admin.html")
     print(" ")
     print("   Admin user:  admin")
     print("   Admin pass:  password")
     print(" ")
+    print(f"   {'HTTPS' if use_https else 'HTTP'} mode enabled")
     print("   To stop the server, press CTRL+C")
     print("===================================================")
     
-    app.logger.info(f"Collectify server started at http://{local_ip}:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.logger.info(f"Collectify server started at {protocol}://{local_ip}:5000")
+    app.run(
+        debug=True, 
+        host='0.0.0.0', 
+        port=5000, 
+        ssl_context='adhoc'
+        # ssl_context=ssl_context
+    )

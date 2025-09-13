@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "BE: Flask",
+            "name": "BE: Flask (HTTP)",
             "type": "debugpy",
             "request": "launch",
             "module": "flask",
@@ -24,7 +24,30 @@
             "justMyCode": false,
         },
         {
-            "name": "Chrome",
+            "name": "BE: Flask (HTTPS)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "app.py",
+                "FLASK_DEBUG": "1",
+                "SSL_CERT_FILE": "${workspaceFolder}/certificates/server.crt",
+                "SSL_KEY_FILE": "${workspaceFolder}/certificates/server.key",
+                "FLASK_HTTPS": "1"
+            },
+            "preLaunchTask": "Init Collectify DB Tables",
+            "args": [
+                "run",
+                "--cert=adhoc"
+                // "--no-debugger",
+                // "--no-reload"
+            ],
+            "jinja": true,
+            "cwd": "${workspaceFolder}/backend",
+            "justMyCode": false,
+        },
+        {
+            "name": "Chrome (HTTP)",
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:3000",
@@ -41,7 +64,25 @@
             }
         },
         {
-            "name": "Edge",
+            "name": "Chrome (HTTPS)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "https://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMaps": true,
+            "trace": true,
+            "runtimeArgs": [
+                "--remote-debugging-port=9222",
+                "--ignore-certificate-errors"
+            ],
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/src/*",
+                "webpack:///node_modules/*": "${webRoot}/node_modules/*",
+                "webpack:///*": "*"
+            }
+        },
+        {
+            "name": "Edge (HTTP)",
             "type": "msedge",
             "request": "launch",
             "url": "http://localhost:3000",
@@ -58,6 +99,44 @@
                 "webpack:///node_modules/*": "${webRoot}/node_modules/*",
                 "webpack:///*": "*"
             }
+        },
+        {
+            "name": "Edge (HTTPS)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "https://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMaps": true,
+            "trace": true,
+            "runtimeArgs": [
+                "--remote-debugging-port=9222",
+                "--ignore-certificate-errors"
+            ],
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/src/*",
+                "webpack:///./*": "${webRoot}/*", 
+                "webpack:///./~/*": "${webRoot}/node_modules/*",
+                "webpack:///node_modules/*": "${webRoot}/node_modules/*",
+                "webpack:///*": "*"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack (HTTP)",
+            "configurations": ["BE: Flask (HTTP)", "Chrome (HTTP)"]
+        },
+        {
+            "name": "Full Stack (HTTPS)",
+            "configurations": ["BE: Flask (HTTPS)", "Chrome (HTTPS)"]
+        },
+        {
+            "name": "Full Stack (Flexible HTTPS)",
+            "configurations": ["BE: Flask (Flexible HTTPS)", "Chrome (HTTPS)"]
+        },
+        {
+            "name": "Full Stack (Flask CLI HTTPS)",
+            "configurations": ["BE: Flask CLI (HTTPS)", "Chrome (HTTPS)"]
         }
     ]
 }

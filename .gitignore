@@ -1,5 +1,6 @@
 .flaskenv
 *.db
+certificates/
 uploads/
 
 # Byte-compiled / optimized / DLL files

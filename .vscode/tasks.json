@@ -25,6 +25,138 @@
                 "panel": "shared"
             },
             "problemMatcher": []
+        },
+        // Frontend tasks
+        {
+            "label": "Frontend: Start (HTTP)",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "start"],
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Frontend: Start (HTTPS)",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "start:https"],
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Frontend: Start (HTTPS PFX)",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "start:https:pfx"],
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        // Backend tasks
+        {
+            "label": "Backend: Start (HTTP)",
+            "type": "shell",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/backend/run.py"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Backend: Start (HTTPS)",
+            "type": "shell",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/backend/run_with_https.py"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Backend: Start (Flexible HTTPS)",
+            "type": "shell",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/backend/run_with_flexible_https.py"],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Backend: Start (Flask CLI HTTPS)",
+            "type": "shell",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["-m", "flask", "run"],
+            "options": {
+                "env": {
+                    "FLASK_APP": "flask_https.py",
+                    "FLASK_DEBUG": "1",
+                    "SSL_CERT_FILE": "${workspaceFolder}/certificates/server.crt",
+                    "SSL_KEY_FILE": "${workspaceFolder}/certificates/server.key"
+                },
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        // Combined tasks
+        {
+            "label": "Start Full Stack (HTTP)",
+            "dependsOn": ["Backend: Start (HTTP)", "Frontend: Start (HTTP)"],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Full Stack (HTTPS)",
+            "dependsOn": ["Backend: Start (HTTPS)", "Frontend: Start (HTTPS)"],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Full Stack (Flexible HTTPS)",
+            "dependsOn": ["Backend: Start (Flexible HTTPS)", "Frontend: Start (HTTPS PFX)"],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Full Stack (Direct HTTPS)",
+            "dependsOn": ["Backend: Start (Direct HTTPS)", "Frontend: Start (HTTPS)"],
+            "problemMatcher": []
         }
     ]
 }

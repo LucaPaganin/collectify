@@ -29,6 +29,35 @@ A Flask application for managing collections of items with customizable specific
    docker-compose down
    ```
 
+## Development Setup
+
+### HTTPS Setup (Recommended)
+For local development, especially when testing camera functionality, it's recommended to use HTTPS:
+
+1. Run one of the automated setup scripts (Windows PowerShell):
+   ```powershell
+   # Traditional approach (requires OpenSSL)
+   ./start-https.ps1
+   
+   # Flexible approach (works with both CRT+KEY and PFX)
+   ./start-https-flexible.ps1
+   
+   # Direct approach (using app.py with environment variables)
+   ./start-https-direct.ps1
+   
+   # Flask CLI approach (recommended for development)
+   ./start-https-flask-cli.ps1
+   ```
+
+2. Access the application:
+   - Frontend: https://localhost:3000
+   - Backend API: https://localhost:5000/api
+
+3. You may need to accept security warnings in your browser for self-signed certificates
+
+See the [HTTPS Setup Guide](docs/https-setup.md) for more details and troubleshooting.
+
+
 ### Data Persistence
 - Database and uploaded files are stored in a Docker volume named `collectify-data`
 - Data persists between container restarts
