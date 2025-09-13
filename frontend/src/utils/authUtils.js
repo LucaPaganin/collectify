@@ -9,12 +9,17 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
   // Add withCredentials for cross-domain requests with credentials
-  withCredentials: false
+  withCredentials: false,
+  // Trust self-signed certificates
+  httpsAgent: new (require('https').Agent)({
+    rejectUnauthorized: false
+  })
 });
 
 // Log the API URL for debugging
 console.log(`API configured with base URL: ${config.apiUrl}`);
 console.log(`Current window location: ${window.location.origin}`);
+console.log('HTTPS Agent configured to trust self-signed certificates');
 
 // Test the API connection on startup
 const testApiConnection = async () => {
