@@ -88,7 +88,9 @@ export const suggestAlternativeApiUrl = () => {
   }
 };
 
-export default {
+const connectionUtils = {
   testApiConnection,
   suggestAlternativeApiUrl
 };
+
+export default connectionUtils;

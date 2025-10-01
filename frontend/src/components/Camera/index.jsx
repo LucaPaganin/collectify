@@ -26,7 +26,7 @@ const Camera = ({ onCapture, onError, onCancel }) => {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [facingMode]); // Re-initialize when facingMode changes
+  }, [facingMode, initCamera, stream]); // Re-initialize when facingMode changes
 
   // Check for available camera devices
   useEffect(() => {

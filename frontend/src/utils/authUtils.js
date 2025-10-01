@@ -10,16 +10,14 @@ export const api = axios.create({
   },
   // Add withCredentials for cross-domain requests with credentials
   withCredentials: false,
-  // Trust self-signed certificates
-  httpsAgent: new (require('https').Agent)({
-    rejectUnauthorized: false
-  })
+  // Set timeout for requests
+  timeout: 10000
 });
 
 // Log the API URL for debugging
 console.log(`API configured with base URL: ${config.apiUrl}`);
 console.log(`Current window location: ${window.location.origin}`);
-console.log('HTTPS Agent configured to trust self-signed certificates');
+console.log('Note: For self-signed certificates, users need to manually accept the certificate in their browser');
 
 // Test the API connection on startup
 const testApiConnection = async () => {
@@ -30,6 +28,17 @@ const testApiConnection = async () => {
     return true;
   } catch (error) {
     console.error('API connection test failed:', error.message);
+    
+    // Check if this might be a certificate issue
+    if (error.message && (error.message.includes('certificate') || error.message.includes('SSL') || error.message.includes('TLS'))) {
+      console.warn('This appears to be a certificate validation error.');
+      console.warn('For self-signed certificates, you need to:');
+      console.warn('1. Navigate to the API URL directly in your browser');
+      console.warn('2. Accept the security warning to trust the certificate');
+      console.warn('3. Refresh this application');
+      console.warn(`API URL: ${config.apiUrl.replace('/api', '')}`);
+    }
+    
     // If the connection failed, log detailed information to help debugging
     if (error.response) {
       console.error('Response data:', error.response.data);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import styles from './Camera.module.css';
 
 const CameraFeed = ({ stream, videoRef }) => {
@@ -12,7 +12,7 @@ const CameraFeed = ({ stream, videoRef }) => {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream]);
+  }, [stream, videoRef]);
 
   return (
     <div className={styles.cameraContainer}>
