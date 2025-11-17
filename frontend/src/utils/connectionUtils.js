@@ -60,6 +60,75 @@ export const testApiConnection = async () => {
 };
 
 /**
+ * Tests multiple API URLs to find a working connection
+ * @returns {Promise<Object>} Connection test results for all URLs
+ */
+export const testMultipleApiConnections = async () => {
+  const urlsToTest = [
+    config.apiUrl,
+    'https://collectify-app:5000/api' // Docker service URL
+  ];
+
+  const results = {
+    timestamp: new Date().toISOString(),
+    results: [],
+    workingUrl: null
+  };
+
+  for (const testUrl of urlsToTest) {
+    const testResult = {
+      url: testUrl,
+      connectionStatus: 'unknown',
+      error: null,
+      responseTime: null
+    };
+
+    try {
+      console.log(`Testing API connection to: ${testUrl}`);
+      const startTime = Date.now();
+      
+      // Create a temporary axios instance for this specific URL
+      const { default: axios } = await import('axios');
+      const testApi = axios.create({
+        baseURL: testUrl,
+        timeout: 5000 // 5 second timeout for tests
+      });
+      
+      const response = await testApi.options('/');
+      const endTime = Date.now();
+      
+      testResult.connectionStatus = 'success';
+      testResult.responseTime = endTime - startTime;
+      testResult.statusCode = response.status;
+      
+      // If this is the first successful connection, mark it as working
+      if (!results.workingUrl) {
+        results.workingUrl = testUrl;
+      }
+      
+      console.log(`✅ API connection successful to: ${testUrl} (${testResult.responseTime}ms)`);
+    } catch (error) {
+      testResult.connectionStatus = 'failed';
+      testResult.error = {
+        message: error.message,
+        code: error.code
+      };
+      
+      if (error.response) {
+        testResult.statusCode = error.response.status;
+      }
+      
+      console.log(`❌ API connection failed to: ${testUrl} - ${error.message}`);
+    }
+    
+    results.results.push(testResult);
+  }
+
+  console.log('Multi-API connection test results:', results);
+  return results;
+};
+
+/**
  * Suggests an alternative API URL based on network conditions
  * @returns {string|null} Suggested API URL or null if current one is fine
  */
@@ -90,6 +159,7 @@ export const suggestAlternativeApiUrl = () => {
 
 const connectionUtils = {
   testApiConnection,
+  testMultipleApiConnections,
   suggestAlternativeApiUrl
 };
 
