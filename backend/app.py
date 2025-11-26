@@ -34,19 +34,6 @@ CORS(app,
      }}, 
      send_wildcard=True)
 
-
-
-# Add CORS headers to all responses
-@app.after_request
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Expose-Headers', 'Content-Length,Content-Range')
-    return response
-
-
 def log_startup_info():
     """Log startup information on first request."""
     local_ip = get_local_ip()
@@ -60,15 +47,15 @@ def log_startup_info():
     app.logger.info(f"HTTPS is {'ENABLED' if use_https else 'DISABLED'}")
     app.logger.info("=" * 50)
 
-# Register CLI commands
-@app.after_request
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Expose-Headers', 'Content-Length,Content-Range')
-    return response
+# # Register CLI commands
+# @app.after_request
+# def add_cors_headers(response):
+#     # response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
+#     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
+#     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
+#     # response.headers.add('Access-Control-Allow-Credentials', 'true')
+#     response.headers.add('Access-Control-Allow-Expose-Headers', 'Content-Length,Content-Range')
+#     return response
 
 
 def log_startup_info():
@@ -293,16 +280,6 @@ with app.app_context():
         db.session.add(admin)
         db.session.commit()
         app.logger.info("[DB] Default admin user created successfully")
-    
-# Add CORS headers to all responses
-@app.after_request
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', os.getenv('CORS_ORIGIN', '*'))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-API-KEY')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Expose-Headers', 'Content-Length,Content-Range')
-    return response
 
 # Register CLI commands
 register_commands(app)
