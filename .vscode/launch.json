@@ -80,45 +80,6 @@
                 "webpack:///node_modules/*": "${webRoot}/node_modules/*",
                 "webpack:///*": "*"
             }
-        },
-        {
-            "name": "Edge (HTTP)",
-            "type": "msedge",
-            "request": "launch",
-            "url": "http://localhost:3000",
-            "webRoot": "${workspaceFolder}/frontend",
-            "sourceMaps": true,
-            "trace": true,
-            "runtimeArgs": [
-                "--remote-debugging-port=9222"
-            ],
-            "sourceMapPathOverrides": {
-                "webpack:///src/*": "${webRoot}/src/*",
-                "webpack:///./*": "${webRoot}/*", 
-                "webpack:///./~/*": "${webRoot}/node_modules/*",
-                "webpack:///node_modules/*": "${webRoot}/node_modules/*",
-                "webpack:///*": "*"
-            }
-        },
-        {
-            "name": "Edge (HTTPS)",
-            "type": "msedge",
-            "request": "launch",
-            "url": "https://localhost:3000",
-            "webRoot": "${workspaceFolder}/frontend",
-            "sourceMaps": true,
-            "trace": true,
-            "runtimeArgs": [
-                "--remote-debugging-port=9222",
-                "--ignore-certificate-errors"
-            ],
-            "sourceMapPathOverrides": {
-                "webpack:///src/*": "${webRoot}/src/*",
-                "webpack:///./*": "${webRoot}/*", 
-                "webpack:///./~/*": "${webRoot}/node_modules/*",
-                "webpack:///node_modules/*": "${webRoot}/node_modules/*",
-                "webpack:///*": "*"
-            }
         }
     ],
     "compounds": [
@@ -129,14 +90,6 @@
         {
             "name": "Full Stack (HTTPS)",
             "configurations": ["BE: Flask (HTTPS)", "Chrome (HTTPS)"]
-        },
-        {
-            "name": "Full Stack (Flexible HTTPS)",
-            "configurations": ["BE: Flask (Flexible HTTPS)", "Chrome (HTTPS)"]
-        },
-        {
-            "name": "Full Stack (Flask CLI HTTPS)",
-            "configurations": ["BE: Flask CLI (HTTPS)", "Chrome (HTTPS)"]
         }
     ]
 }
