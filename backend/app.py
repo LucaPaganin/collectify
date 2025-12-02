@@ -17,7 +17,6 @@ from flask_cors import CORS
 from utils.ssl_utils import get_ssl_context
 import sys
 import socket
-import ssl
 
 # Create the Flask application
 app = create_app()
@@ -30,8 +29,7 @@ CORS(app,
          "origins": cors_origins.split(","),
          "allow_headers": "*",
          "expose_headers": "*",
-         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-         "supports_credentials": True
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
      }}, 
      send_wildcard=True)
 
