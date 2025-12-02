@@ -8,11 +8,14 @@ import config from '../../config';
 const ApiDetails = ({ status, onCheckNow }) => {
   // Check if we're using HTTPS on frontend but HTTP for API
   const isHttpsMismatch = window.location.protocol === 'https:' && config.apiUrl.startsWith('http:');
+
   // Check if camera access might be affected by security context
-  const isCameraRelevant = status.details?.error?.includes('getUserMedia') || 
-                          status.details?.error?.includes('camera') ||
-                          !status.connected;
-  
+  // Note: error is an object with { message, code, stack }, not a string
+  const errorMessage = status.details?.error?.message || '';
+  const isCameraRelevant = (typeof errorMessage === 'string' &&
+    (errorMessage.includes('getUserMedia') || errorMessage.includes('camera'))) ||
+    !status.connected;
+
   return (
     <div className={styles.detailsContainer}>
       <div className={styles.infoRow}>
@@ -25,14 +28,14 @@ const ApiDetails = ({ status, onCheckNow }) => {
         <strong>Last Checked:</strong> {status.lastChecked?.toLocaleTimeString() || 'Never'}
       </div>
       <div className={styles.infoRow}>
-        <button 
+        <button
           onClick={onCheckNow}
           className={styles.checkButton}
         >
           Check Now
         </button>
       </div>
-      
+
       {/* HTTPS Information */}
       {isHttpsMismatch && (
         <div className={styles.securityInfo || 'securityInfo'}>
@@ -45,7 +48,7 @@ const ApiDetails = ({ status, onCheckNow }) => {
           <ol>
             <li>Configure the backend to use HTTPS as well (recommended)</li>
             <li>
-              Switch to HTTP frontend: <a 
+              Switch to HTTP frontend: <a
                 href={window.location.href.replace('https:', 'http:')}
                 className={styles.linkButton || 'linkButton'}
               >
@@ -55,13 +58,13 @@ const ApiDetails = ({ status, onCheckNow }) => {
           </ol>
         </div>
       )}
-      
+
       {/* Camera Access Information */}
       {isCameraRelevant && !isHttpsMismatch && window.location.protocol !== 'https:' && (
         <div className={styles.securityInfo || 'securityInfo'}>
           <h4>Camera Access Requires Secure Context</h4>
           <p>
-            Modern browsers require HTTPS for camera access. If you're experiencing 
+            Modern browsers require HTTPS for camera access. If you're experiencing
             camera issues, consider switching to HTTPS.
           </p>
           <p>
@@ -69,7 +72,7 @@ const ApiDetails = ({ status, onCheckNow }) => {
           </p>
         </div>
       )}
-      
+
       <div className={styles.detailsContent}>
         {JSON.stringify(status.details, null, 2)}
       </div>

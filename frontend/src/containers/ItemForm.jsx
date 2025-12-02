@@ -1,267 +1,14 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios'; // Keep for axios.isCancel
 import Modal from '../components/Modal';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+import PhotoUpload from '../components/PhotoUpload';
 import { useNavigate } from 'react-router-dom';
 import useIsAuthenticated from 'react-auth-kit/hooks/useIsAuthenticated';
 import { api } from '../utils/authUtils';
-import Camera from '../components/Camera';
-
-// Component for handling photo uploads
-const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoError, setPhotoError] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const handlePhotoUpload = async (file) => {
-    if (!file || !initialData?.id) return;
-    
-    setPhotoError(null);
-    setPhotoUploading(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append('photos[]', file);
-      
-      const res = await api.post(`/items/${initialData.id}/photos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      const filename = res?.data?.filename;
-      if (filename) {
-        // Construct the full URL using the API base URL
-        const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
-        onPhotoUpload(`${apiBaseUrl}/uploads/${filename}`);
-        console.log(`Photo URL: ${apiBaseUrl}/uploads/${filename}`);
-      }
-    } catch (err) {
-      console.error('Error uploading photo:', err);
-      setPhotoError(err.response?.data?.error || 'Failed to upload image');
-    } finally {
-      setPhotoUploading(false);
-      setCapturedPhoto(null);
-    }
-  };
-
-  const handleFileInputChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handlePhotoUpload(file);
-    }
-    // Reset input so the same file can be selected again
-    e.target.value = '';
-  };
-
-  const handleCameraCapture = (file) => {
-    // Create temporary URL for preview
-    const objectUrl = URL.createObjectURL(file);
-    setCapturedPhoto({
-      file: file,
-      previewUrl: objectUrl
-    });
-    
-    // Don't automatically upload - wait for user to save the form
-    setShowCamera(false);
-    onPhotoUpload(objectUrl); // Set temporary preview
-  };
-
-  // Handle saving the captured photo
-  const handleSavePhoto = () => {
-    if (capturedPhoto?.file) {
-      handlePhotoUpload(capturedPhoto.file);
-    }
-  };
-
-  // Handle discarding the captured photo
-  const handleDiscardPhoto = () => {
-    if (capturedPhoto?.previewUrl) {
-      URL.revokeObjectURL(capturedPhoto.previewUrl);
-    }
-    setCapturedPhoto(null);
-    setShowCamera(false);
-    // Restore original photo URL
-    if (currentPhotoUrl && !currentPhotoUrl.startsWith('blob:')) {
-      onPhotoUpload(currentPhotoUrl);
-    } else {
-      onPhotoUpload(null);
-    }
-  };
-
-  return (
-    <div className="photo-upload mb-3">
-      <label className="form-label">Item Image</label>
-      
-      {photoError && (
-        <div className="alert alert-danger">
-          <strong>Error: </strong>{photoError}
-          {photoError.includes('not supported') && (
-            <div className="mt-2">
-              <small>
-                Try using a different browser like Chrome or Safari, or check if your device has a camera.
-              </small>
-            </div>
-          )}
-        </div>
-      )}
-      
-      {showCamera ? (
-        <Camera 
-          onCapture={handleCameraCapture}
-          onCancel={() => setShowCamera(false)}
-          onError={(error) => {
-            console.error('Camera error:', error);
-            setPhotoError(error.message || 'Failed to access camera');
-            setShowCamera(false);
-          }}
-        />
-      ) : capturedPhoto ? (
-        <div className="mb-3">
-          <div 
-            style={{ 
-              minHeight: 400, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              justifyContent: 'center',
-              margin: '0 auto',
-              border: '1px solid #dee2e6',
-              borderRadius: '12px',
-              padding: '10px',
-              backgroundColor: '#f8f9fa'
-            }}
-          >
-            <a 
-              href={capturedPhoto.previewUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
-              title="Click to open full image in new tab"
-            >
-              <img 
-                src={capturedPhoto.previewUrl} 
-                alt="Captured" 
-                style={{ 
-                  maxWidth: '100%', 
-                  maxHeight: 400, 
-                  objectFit: 'contain', 
-                  borderRadius: 8 
-                }} 
-              />
-            </a>
-          </div>
-          <div className="d-flex gap-2 mt-2">
-            <Button variant="outline-danger" onClick={handleDiscardPhoto} className="flex-grow-1">
-              Discard
-            </Button>
-            <Button variant="primary" onClick={handleSavePhoto} className="flex-grow-1">
-              Use Photo
-            </Button>
-          </div>
-        </div>
-      ) : currentPhotoUrl && !photoUploading ? (
-        <div className="mb-3">
-          <div 
-            style={{ 
-              minHeight: 400, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              justifyContent: 'center',
-              margin: '0 auto',
-              border: '1px solid #dee2e6',
-              borderRadius: '12px',
-              padding: '10px',
-              backgroundColor: '#f8f9fa'
-            }}
-          >
-            <a 
-              href={currentPhotoUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
-              title="Click to open full image in new tab"
-            >
-              <img 
-                src={currentPhotoUrl} 
-                alt="Item" 
-                style={{ 
-                  maxWidth: '100%', 
-                  maxHeight: 400, 
-                  objectFit: 'contain', 
-                  borderRadius: 8
-                }} 
-              />
-            </a>
-          </div>
-          <div className="d-flex align-items-center gap-2 mt-3">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              className="form-control"
-              onChange={handleFileInputChange}
-              disabled={photoUploading}
-              style={{ flex: 1 }}
-            />
-            <Button
-              type="button"
-              onClick={() => setShowCamera(true)}
-              disabled={photoUploading}
-            >
-              Camera
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="d-flex align-items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/*"
-            className="form-control"
-            onChange={handleFileInputChange}
-            disabled={photoUploading}
-            style={{ flex: 1 }}
-          />
-          <Button
-            type="button"
-            onClick={() => setShowCamera(true)}
-            disabled={photoUploading}
-          >
-            Camera
-          </Button>
-        </div>
-      )}
-      
-      {photoUploading && (
-        <div className="alert alert-info mt-2">
-          <div className="d-flex align-items-center">
-            <div className="spinner-border spinner-border-sm me-2" role="status">
-              <span className="visually-hidden">Uploading...</span>
-            </div>
-            <span>Uploading photo...</span>
-          </div>
-        </div>
-      )}
-      
-      {photoError && (
-        <div className="alert alert-danger mt-2">
-          <strong>Error: </strong>{photoError}
-          {photoError.includes('not supported') && (
-            <div className="mt-2">
-              <small>
-                Try using a different browser like Chrome or Safari, or check if your device has a camera.
-                On some mobile devices, you may need to allow camera access in your browser settings.
-              </small>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import { getApiBaseUrl } from '../utils/urlUtils';
 
 // Main ItemForm component
 const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFile = null, onAutoUploadConsumed = null }) => {
@@ -274,12 +21,12 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   // Disambiguation state
   const [showDisambiguationDialog, setShowDisambiguationDialog] = useState(false);
   const [disambiguatedName, setDisambiguatedName] = useState('');
-  
+
   const navigate = useNavigate();
-  
+
   // auth state
   const isAuthenticated = useIsAuthenticated();
-  
+
   // form state
   const [form, setForm] = useState({
     name: '',
@@ -291,7 +38,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   useEffect(() => {
     if (show) {
       const controller = new AbortController();
-      
+
       api.get('/categories', { signal: controller.signal })
         .then(res => {
           setCategories(res.data);
@@ -301,7 +48,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             console.error('Error fetching categories:', err);
           }
         });
-        
+
       return () => controller.abort();
     }
   }, [show]);
@@ -315,18 +62,18 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
           try {
             const response = await api.get(`/items/${initialData.id}`);
             const itemData = response.data;
-            
+
             // Extract specification values from the response
             const specValues = itemData.specification_values || {};
-            
+
             setForm({
               name: itemData.name || '',
               category_id: itemData.category_id || '',
               specs: specValues,
             });
-            
+
             // Construct the full URL using the API base URL
-            const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
+            const apiBaseUrl = getApiBaseUrl();
             setPhotoPreviewUrl(itemData.primary_photo ? `${apiBaseUrl}/uploads/${itemData.primary_photo}` : initialData.primary_photo_url);
           } catch (error) {
             console.error('Error fetching item data:', error);
@@ -339,7 +86,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             setPhotoPreviewUrl(initialData.primary_photo_url || null);
           }
         };
-        
+
         fetchItemData();
       } else {
         // For new items, just use the initialData
@@ -358,7 +105,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     if (show) {
       setError(null);
       setAuthInProgress(false);
-      
+
       // Only initialize empty form when no initialData is provided
       // This avoids conflicts with the other useEffect that fetches data
       if (!initialData) {
@@ -372,15 +119,15 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   useEffect(() => {
     if (form.category_id && show) {
       const controller = new AbortController();
-      
+
       api
-        .get(`/categories/${form.category_id}/specifications_schema`, { 
-          signal: controller.signal 
+        .get(`/categories/${form.category_id}/specifications_schema`, {
+          signal: controller.signal
         })
         .then(res => {
           // Handle different possible response formats
           let fields;
-          
+
           if (Array.isArray(res.data)) {
             // Array format
             fields = res.data.map(spec => ({
@@ -402,14 +149,14 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
           } else {
             fields = [];
           }
-          
+
           // Sort by display_order if available
           fields.sort((a, b) => {
             const orderA = a.display_order !== undefined ? a.display_order : 0;
             const orderB = b.display_order !== undefined ? b.display_order : 0;
             return orderA - orderB;
           });
-          
+
           setSpecFields(fields);
         })
         .catch((error) => {
@@ -418,7 +165,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
             setSpecFields([]);
           }
         });
-        
+
       return () => controller.abort();
     } else {
       setSpecFields([]);
@@ -453,14 +200,14 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         search: name,
         category_id: categoryId
       });
-      
+
       const res = await api.get(`/items?${searchParams.toString()}`);
-      
+
       // Filter out the current item (if editing)
-      const duplicates = currentItemId 
+      const duplicates = currentItemId
         ? res.data.filter(item => item.id !== parseInt(currentItemId) && item.name.toLowerCase() === name.toLowerCase())
         : res.data.filter(item => item.name.toLowerCase() === name.toLowerCase());
-      
+
       console.log('Checking duplicates:', duplicates);
       return duplicates.length > 0;
     } catch (error) {
@@ -474,10 +221,10 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     // Extract any existing numeric suffix
     const match = baseName.match(/^(.+?)(?:\s*\((\d+)\))?$/);
     if (!match) return `${baseName} (1)`;
-    
+
     const [, nameWithoutSuffix, existingSuffix] = match;
     const newSuffix = existingSuffix ? parseInt(existingSuffix) + 1 : 1;
-    
+
     return `${nameWithoutSuffix.trim()} (${newSuffix})`;
   };
 
@@ -485,30 +232,30 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
   const saveWithDisambiguation = async (useDisambiguatedName = false) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Use either the disambiguated name or the original name
       const finalName = useDisambiguatedName ? disambiguatedName : form.name;
       console.log('Saving item with name:', finalName);
-      
+
       // Prepare payload with properly formatted data
       const payload = {
         name: finalName,
         category_id: form.category_id,
         specification_values: form.specs || {}
       };
-      
+
       console.log('Payload:', payload);
-      
+
       // Set the appropriate content type for JSON data
       const config = {
         headers: {
           'Content-Type': 'application/json'
         }
       };
-      
+
       let response;
-      
+
       if (initialData && initialData.id) {
         console.log(`Updating item ${initialData.id}`);
         response = await api.put(`/items/${initialData.id}`, JSON.stringify(payload), config);
@@ -516,13 +263,13 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         console.log('Creating new item');
         response = await api.post('/items', JSON.stringify(payload), config);
       }
-      
+
       console.log('API response:', response);
       setIsLoading(false);
-      
+
       // Close the dialog and call onSave with the response data
       setShowDisambiguationDialog(false);
-      
+
       if (initialData && initialData.id) {
         onSave(response?.data || initialData);
       } else {
@@ -544,9 +291,9 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    
+
     console.log('Form submission initiated');
-    
+
     // Check authentication status before proceeding
     if (!skipAuthCheck && !isAuthenticated && !authInProgress) {
       setAuthInProgress(true);
@@ -556,28 +303,28 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       navigate(`/login?returnUrl=${returnUrl}`);
       return;
     }
-    
+
     // Reset auth progress state
     setAuthInProgress(false);
-    
+
     // Don't proceed if category or name is empty
     if (!form.category_id || !form.name) {
       console.log('Missing required fields', form);
       setError('Name and category are required.');
       return;
     }
-    
+
     console.log('Checking for duplicate name:', form.name, 'in category:', form.category_id);
-    
+
     // Check for duplicate name before submitting
     const isDuplicate = await checkDuplicateName(
-      form.name, 
+      form.name,
       form.category_id,
       initialData?.id
     );
-    
+
     console.log('Duplicate check result:', isDuplicate);
-    
+
     if (isDuplicate) {
       // Generate a suggested disambiguated name
       const newName = generateDisambiguatedName(form.name);
@@ -586,7 +333,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
       setShowDisambiguationDialog(true);
       return;
     }
-    
+
     console.log('No duplicate found, proceeding with normal save');
     // If no duplicate, proceed with normal save
     await saveWithDisambiguation(false);
@@ -599,15 +346,15 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
         try {
           const formData = new FormData();
           formData.append('photos[]', autoUploadPhotoFile);
-          
+
           const res = await api.post(`/items/${initialData.id}/photos`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
           });
-          
+
           const filename = res?.data?.filename;
           if (filename) {
             // Construct the full URL using the API base URL
-            const apiBaseUrl = api.defaults.baseURL.replace('/api', ''); // Remove /api to get base URL
+            const apiBaseUrl = getApiBaseUrl();
             setPhotoPreviewUrl(`${apiBaseUrl}/uploads/${filename}`);
             console.log(`Auto-uploaded photo URL: ${apiBaseUrl}/uploads/${filename}`);
           }
@@ -619,7 +366,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
           }
         }
       };
-      
+
       uploadFile();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -645,7 +392,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
               ))}
             </select>
           </div>
-          
+
           {/* Item name */}
           <div className="mb-2">
             <Input
@@ -657,7 +404,7 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
               required
             />
           </div>
-          
+
           {/* Dynamic specification fields */}
           {specFields.map(field => (
             <div className="mb-2" key={field.name}>
@@ -670,16 +417,16 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
               />
             </div>
           ))}
-          
+
           {/* Photo upload controls - only when editing an existing item */}
           {initialData && initialData.id && (
-            <PhotoUpload 
-              initialData={initialData} 
+            <PhotoUpload
+              initialData={initialData}
               onPhotoUpload={handlePhotoUploaded}
               currentPhotoUrl={photoPreviewUrl}
             />
           )}
-          
+
           {/* Form actions */}
           <div className="mt-3 text-end">
             {error && (
@@ -687,11 +434,11 @@ const ItemForm = ({ show, onClose, onSave, initialData = null, autoUploadPhotoFi
                 {error}
               </div>
             )}
-            <Button 
-              variant="secondary" 
-              type="button" 
-              onClick={onClose} 
-              className="me-2" 
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={onClose}
+              className="me-2"
               disabled={isLoading}
             >
               Cancel
