@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { api } from '../../utils/authUtils';
 import { getApiBaseUrl } from '../../utils/urlUtils';
+import config from '../../config';
 import Button from '../Button';
 import Camera from '../Camera';
 
@@ -198,13 +199,15 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
                             disabled={photoUploading}
                             style={{ flex: 1 }}
                         />
-                        <Button
-                            type="button"
-                            onClick={() => setShowCamera(true)}
-                            disabled={photoUploading}
-                        >
-                            Camera
-                        </Button>
+                        {config.features.enableCamera && (
+                            <Button
+                                type="button"
+                                onClick={() => setShowCamera(true)}
+                                disabled={photoUploading}
+                            >
+                                Camera
+                            </Button>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -218,13 +221,15 @@ const PhotoUpload = ({ initialData, onPhotoUpload, currentPhotoUrl }) => {
                         disabled={photoUploading}
                         style={{ flex: 1 }}
                     />
-                    <Button
-                        type="button"
-                        onClick={() => setShowCamera(true)}
-                        disabled={photoUploading}
-                    >
-                        Camera
-                    </Button>
+                    {config.features.enableCamera && (
+                        <Button
+                            type="button"
+                            onClick={() => setShowCamera(true)}
+                            disabled={photoUploading}
+                        >
+                            Camera
+                        </Button>
+                    )}
                 </div>
             )}
 
