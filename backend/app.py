@@ -35,7 +35,6 @@ CORS(app,
      }}, 
      send_wildcard=True)
 
-
 def log_startup_info():
     """Log startup information on first request."""
     local_ip = get_local_ip()

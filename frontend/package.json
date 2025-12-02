@@ -64,6 +64,7 @@
     "@eslint/object-schema": "^2.1.6",
     "@jridgewell/sourcemap-codec": "^1.5.4",
     "@rollup/plugin-terser": "^0.4.4",
+    "ajv": "^8.17.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.32.0",
     "glob": "^11.0.3",
