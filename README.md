@@ -43,6 +43,14 @@ Collectify is a web application designed to help you organize, manage, and view 
 
 ---
 
+## TL;DR
+
+If you just want to get started quickly, you can use the Docker Compose setup. This will start the frontend and backend containers, and you can access the application at `http://localhost:80`. The steps are
+- create .env file in the repo folder copying .env.example
+- run `docker-compose up -d --build`
+- after the command finishes, open http://localhost:80 in your browser
+- login with username `admin` and password `password`
+
 ## Quick Start with Docker
 
 The recommended way to run Collectify is via Docker. This isolates dependencies and makes setup easy.
